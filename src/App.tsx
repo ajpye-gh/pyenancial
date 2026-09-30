@@ -6,6 +6,7 @@ import { SliderField } from './components/controls/SliderField';
 import { GoalsPanel } from './components/goals/GoalsPanel';
 import { MobileSubTabs } from './components/MobileSubTabs';
 import { MortgagePage } from './components/mortgage/MortgagePage';
+import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
 import { PlanToolbar } from './components/PlanToolbar';
 import { RetirementPage } from './components/retirement/RetirementPage';
 import { SettingsMenu } from './components/SettingsMenu';
@@ -39,6 +40,10 @@ function App() {
   const [activeTab, setActiveTab] = useState<PageTab>('plan');
   const [mobileTab, setMobileTab] = useState<MobileTab>('inputs');
   const headerHidden = useAutoHideOnScroll();
+  // Initial value only - not kept in sync with draft.onboardingComplete after mount, so a later
+  // "review my answers" affordance (Story 8) or "+ new plan" (Story 9) can reopen this even once
+  // onboardingComplete is already true, without it snapping back shut on the next render.
+  const [questionnaireOpen, setQuestionnaireOpen] = useState(() => !draft.onboardingComplete);
 
   /** Which saved plan (if any) the current draft was loaded from/saved as, plus a snapshot of its
    *  content at that moment - together these drive the "which plan, and is it modified" indicator
@@ -251,6 +256,23 @@ function App() {
         onChange={draft.setBaseInput}
         answers={draft.answers}
         onAnswer={draft.setAnswer}
+      />
+    );
+  }
+
+  if (questionnaireOpen) {
+    return (
+      <OnboardingFlow
+        answers={draft.answers}
+        onAnswer={draft.setAnswer}
+        baseInputs={draft.baseInputs}
+        ranges={DEFAULT_BASE_RANGES}
+        onChange={draft.setBaseInput}
+        onFinish={() => {
+          draft.completeOnboarding();
+          setQuestionnaireOpen(false);
+          setActiveTab('plan');
+        }}
       />
     );
   }
