@@ -65,10 +65,11 @@ async function walkToRetirementBranch(user: UserEvent) {
   await user.click(screen.getByRole('button', { name: 'No' })); // hasKids
   await user.click(screen.getByRole('button', { name: 'Continue' })); // Getting started -> Income
 
-  for (let i = 0; i < 4; i += 1) {
+  await user.click(screen.getByRole('button', { name: 'Next' })); // salaryY0K -> salary milestones
+  await user.click(screen.getByRole('button', { name: 'Done - continue' }));
+  for (let i = 0; i < 3; i += 1) {
     await user.click(screen.getByRole('button', { name: 'Next' }));
   }
-  await user.click(screen.getByRole('button', { name: 'Done - continue' })); // salary milestones
   await user.click(screen.getByRole('button', { name: 'Continue' })); // Income -> Expenses
 
   for (let i = 0; i < 3; i += 1) {
@@ -137,7 +138,7 @@ describe('OnboardingFlow', () => {
     expect(screen.getByText('Rent')).toBeInTheDocument();
   });
 
-  it('offers a repeatable "add income milestone" step after the Income section, reflected in its summary', async () => {
+  it('offers a repeatable "add income milestone" step right after starting salary, reflected in the Income summary', async () => {
     const user = userEvent.setup();
     render(<Harness onFinish={jest.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Start' }));
@@ -146,14 +147,18 @@ describe('OnboardingFlow', () => {
     await user.click(screen.getByRole('button', { name: 'No' }));
     await user.click(screen.getByRole('button', { name: 'Continue' })); // Getting started -> Income
 
-    // 4 Income slider questions: click Next through each.
-    for (let i = 0; i < 4; i += 1) {
-      await user.click(screen.getByRole('button', { name: 'Next' }));
-    }
+    // Salary, yr 0 (today) is the Income section's first question.
+    await user.click(screen.getByRole('button', { name: 'Next' }));
 
     expect(screen.getByRole('heading', { name: /any income milestones to add/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '+ Add income milestone' }));
     await user.click(screen.getByRole('button', { name: 'Done - continue' }));
+
+    // Back into the remaining scalar questions (Growth after last raise, Net keep rate, Annual bonus).
+    expect(screen.getByRole('heading', { name: /growth after last raise/i })).toBeInTheDocument();
+    for (let i = 0; i < 3; i += 1) {
+      await user.click(screen.getByRole('button', { name: 'Next' }));
+    }
 
     expect(screen.getByRole('heading', { name: /income - your answers/i })).toBeInTheDocument();
     expect(screen.getByText(/income milestone, yr/i)).toBeInTheDocument();
@@ -167,10 +172,11 @@ describe('OnboardingFlow', () => {
     await user.click(screen.getByRole('button', { name: 'No' })); // hasPartnerIncome
     await user.click(screen.getByRole('button', { name: 'No' })); // hasKids
     await user.click(screen.getByRole('button', { name: 'Continue' })); // -> Income
-    for (let i = 0; i < 4; i += 1) {
+    await user.click(screen.getByRole('button', { name: 'Next' })); // salaryY0K -> salary milestones
+    await user.click(screen.getByRole('button', { name: 'Done - continue' }));
+    for (let i = 0; i < 3; i += 1) {
       await user.click(screen.getByRole('button', { name: 'Next' }));
     }
-    await user.click(screen.getByRole('button', { name: 'Done - continue' })); // salary milestones -> Income summary
     await user.click(screen.getByRole('button', { name: 'Continue' })); // -> Expenses (Partner income skipped, hasPartnerIncome=No)
 
     for (let i = 0; i < 3; i += 1) {
@@ -205,6 +211,23 @@ describe('OnboardingFlow', () => {
 
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(onFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows derived monthly take-home pay next to the Net keep rate slider', async () => {
+    const user = userEvent.setup();
+    render(<Harness onFinish={jest.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    await user.click(screen.getByRole('button', { name: 'Own' }));
+    await user.click(screen.getByRole('button', { name: 'No' }));
+    await user.click(screen.getByRole('button', { name: 'No' }));
+    await user.click(screen.getByRole('button', { name: 'Continue' })); // -> Income
+    await user.click(screen.getByRole('button', { name: 'Next' })); // salaryY0K -> salary milestones
+    await user.click(screen.getByRole('button', { name: 'Done - continue' }));
+    await user.click(screen.getByRole('button', { name: 'Next' })); // Growth after last raise -> Net keep rate
+
+    expect(screen.getByRole('heading', { name: /net keep rate/i })).toBeInTheDocument();
+    // Default salaryY0K ($70k) * default netKeepRatePct (75%) / 12 = $4,375/mo.
+    expect(screen.getByText(/\$4,375\/mo/)).toBeInTheDocument();
   });
 
   it('"Yes" continues into the retirement questionnaire (Age, then Roth, ...)', async () => {

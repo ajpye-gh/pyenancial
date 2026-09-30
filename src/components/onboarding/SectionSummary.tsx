@@ -2,6 +2,7 @@ import { formatSliderValue } from '../../lib/format';
 import type { BaseInputs } from '../../lib/baseData';
 import type { Answers } from '../../lib/questions';
 import type { Question, QuestionnaireSection } from '../../lib/questionnaire';
+import { sliderValueLabelOverride } from './valueLabels';
 
 interface SectionSummaryProps {
   section: QuestionnaireSection;
@@ -21,7 +22,8 @@ interface SectionSummaryProps {
 
 function displayValue(question: Question, answers: Answers, baseInputs: BaseInputs): string {
   if (question.kind === 'slider') {
-    return formatSliderValue(baseInputs[question.field.id], question.field.format);
+    const value = baseInputs[question.field.id];
+    return sliderValueLabelOverride(question.field.id, value, baseInputs) ?? formatSliderValue(value, question.field.format);
   }
   const current = answers[question.id];
   if (question.type === 'boolean') {

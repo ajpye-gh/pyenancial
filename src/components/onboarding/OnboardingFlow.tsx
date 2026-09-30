@@ -91,36 +91,53 @@ export function OnboardingFlow({
 
   const handleStart = () => setScreen('question');
 
+  // Where a repeatable step (if any) sits in the question order - defaults to trailing the
+  // section's last question, same as before afterQuestionIndex existed.
+  const repeatableAfterIndex = activeRepeatable
+    ? (activeRepeatable.afterQuestionIndex ?? currentSection.questions.length - 1)
+    : undefined;
+
   const handleNext = () => {
     if (returnToSummary) {
       setReturnToSummary(false);
       setScreen('summary');
       return;
     }
+    if (repeatableAfterIndex !== undefined && questionIndex === repeatableAfterIndex) {
+      setScreen('repeatable');
+      return;
+    }
     if (questionIndex + 1 < currentSection.questions.length) {
       setQuestionIndex(questionIndex + 1);
-    } else if (activeRepeatable) {
-      setScreen('repeatable');
     } else {
       setScreen('summary');
     }
   };
 
-  const handleRepeatableContinue = () => setScreen('summary');
+  const handleRepeatableContinue = () => {
+    if (returnToSummary) {
+      setReturnToSummary(false);
+      setScreen('summary');
+      return;
+    }
+    const afterIndex = repeatableAfterIndex ?? currentSection.questions.length - 1;
+    if (afterIndex + 1 < currentSection.questions.length) {
+      setQuestionIndex(afterIndex + 1);
+      setScreen('question');
+    } else {
+      setScreen('summary');
+    }
+  };
 
   const handleBack = () => {
     if (screen === 'summary') {
-      if (activeRepeatable) {
-        setScreen('repeatable');
-      } else {
-        setScreen('question');
-        setQuestionIndex(currentSection.questions.length - 1);
-      }
+      setScreen('question');
+      setQuestionIndex(currentSection.questions.length - 1);
       return;
     }
     if (screen === 'repeatable') {
       setScreen('question');
-      setQuestionIndex(currentSection.questions.length - 1);
+      setQuestionIndex(repeatableAfterIndex ?? currentSection.questions.length - 1);
       return;
     }
     if (questionIndex > 0) {
@@ -202,7 +219,14 @@ export function OnboardingFlow({
           onEdit={handleSummaryEdit}
           onContinue={handleSummaryContinue}
           repeatableRows={repeatableSummaryRows(activeRepeatable, salaryRaiseControls, partnerSalaryRaiseControls, childrenControls)}
-          onEditRepeatable={activeRepeatable ? () => setScreen('repeatable') : undefined}
+          onEditRepeatable={
+            activeRepeatable
+              ? () => {
+                  setReturnToSummary(true);
+                  setScreen('repeatable');
+                }
+              : undefined
+          }
         />
       )}
     </div>

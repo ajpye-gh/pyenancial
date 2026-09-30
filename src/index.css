@@ -1906,7 +1906,14 @@ input.slider-field__value-input {
 }
 
 .onboarding-welcome__title {
-  margin: 0;
+  /* Overrides the global h1's 56px marketing-hero size, which assumes a full-width layout - at
+   * that size it wraps to two lines inside this 560px-max card (see .onboarding-card) even on a
+   * wide viewport (the global rule only shrinks past a 1024px *viewport* breakpoint, not by
+   * available width), and with margin zeroed out the wrapped lines collided with the paragraph
+   * below. */
+  font-size: 28px;
+  letter-spacing: normal;
+  margin: 0 0 4px;
 }
 
 .onboarding-welcome__body {

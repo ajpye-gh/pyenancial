@@ -39,13 +39,19 @@ export interface SliderQuestion {
 
 export type Question = GatingQuestion | SliderQuestion;
 
-/** A repeatable "add another" step rendered after a section's last question and before its
- *  summary - salary-raise breakpoints and children are dynamic lists, not scalar fields, so they
- *  don't fit the one-Question-per-screen shape above (see Story 4 in features.md). The engine
- *  (OnboardingFlow) renders the matching editor for `target`; this type only says which one and
- *  whether it applies right now. */
+/** A repeatable "add another" step inserted after one particular question in a section (and
+ *  before its summary) - salary-raise breakpoints and children are dynamic lists, not scalar
+ *  fields, so they don't fit the one-Question-per-screen shape above (see Story 4 in
+ *  features.md). The engine (OnboardingFlow) renders the matching editor for `target`; this type
+ *  only says which one, where it goes, and whether it applies right now. */
 export interface RepeatableStep {
   target: 'salaryRaises' | 'partnerSalaryRaises' | 'children';
+  /** 0-indexed question position the step follows - e.g. 0 means right after the section's first
+   *  question. Defaults to the section's last question (i.e. the step trails all of them) when
+   *  omitted. Salary milestones sit right after the starting-salary question specifically so
+   *  "Growth after last raise"/"Net keep rate" (asked next) aren't referencing milestones that
+   *  don't exist yet. */
+  afterQuestionIndex?: number;
   /** Step is skipped unless this returns true (e.g. children only when hasKids). Always shown if
    *  omitted. */
   visibleIf?: (answers: Answers) => boolean;
@@ -121,7 +127,7 @@ export const QUESTIONNAIRE_SECTIONS: QuestionnaireSection[] = [
     kind: 'questions',
     title: 'Income',
     questions: sliderQuestions(fieldGroup('Income')),
-    repeatable: { target: 'salaryRaises' },
+    repeatable: { target: 'salaryRaises', afterQuestionIndex: 0 },
   },
   {
     id: 'partner-income',
@@ -129,7 +135,7 @@ export const QUESTIONNAIRE_SECTIONS: QuestionnaireSection[] = [
     title: 'Partner income',
     questions: sliderQuestions(fieldGroup('Partner income')),
     visibleIf: hasPartnerIncome,
-    repeatable: { target: 'partnerSalaryRaises' },
+    repeatable: { target: 'partnerSalaryRaises', afterQuestionIndex: 0 },
   },
   {
     id: 'expenses',

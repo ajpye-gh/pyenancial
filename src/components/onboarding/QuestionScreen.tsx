@@ -4,6 +4,7 @@ import { formatSliderValue } from '../../lib/format';
 import type { Answers } from '../../lib/questions';
 import type { Question } from '../../lib/questionnaire';
 import { Slider } from '../controls/Slider';
+import { sliderValueLabelOverride } from './valueLabels';
 
 interface QuestionScreenProps {
   question: Question;
@@ -75,7 +76,7 @@ export function QuestionScreen({ question, answers, onAnswer, baseInputs, ranges
           range={ranges[field.id]}
           value={value}
           onChange={(next) => onChange(field.id, next)}
-          valueLabel={formatSliderValue(value, field.format)}
+          valueLabel={sliderValueLabelOverride(field.id, value, baseInputs) ?? formatSliderValue(value, field.format)}
           formatBound={(bound) => formatSliderValue(bound, field.format)}
         />
       </div>
