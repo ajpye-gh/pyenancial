@@ -25,7 +25,7 @@ import { runModel, type IncomeStreamInputs } from './lib/model';
 import { chartToggleOptions, primarySeriesFor, type ChartSeriesId } from './lib/chartSeries';
 import { formatCurrency, formatCurrencyCompact } from './lib/format';
 
-type PageTab = 'primary' | 'mortgage' | 'retirement';
+type PageTab = 'plan' | 'mortgage' | 'retirement';
 type MobileTab = 'inputs' | 'goals' | 'results';
 
 function tabClassName(tab: PageTab, activeTab: PageTab): string {
@@ -36,7 +36,7 @@ function tabClassName(tab: PageTab, activeTab: PageTab): string {
 function App() {
   const draft = useDraftState();
   const [selectedSeriesId, setSelectedSeriesId] = useState<ChartSeriesId | null>(null);
-  const [activeTab, setActiveTab] = useState<PageTab>('primary');
+  const [activeTab, setActiveTab] = useState<PageTab>('plan');
   const [mobileTab, setMobileTab] = useState<MobileTab>('inputs');
   const headerHidden = useAutoHideOnScroll();
 
@@ -173,7 +173,7 @@ function App() {
   ];
 
   let activeTabContent: ReactNode;
-  if (activeTab === 'primary') {
+  if (activeTab === 'plan') {
     activeTabContent = (
       <div className="app-shell" data-mobile-tab={mobileTab}>
         <aside className="app-shell__sidebar">
@@ -260,8 +260,8 @@ function App() {
       <div className={headerHidden ? 'page__header page__header--hidden' : 'page__header'}>
         <img src="https://ajpye-gh.github.io/pyenancial/og-image.svg" alt="Pyenancial" className="page__logo" />
         <nav className="page-tabs">
-          <div className={tabClassName('primary', activeTab)} onClick={() => setActiveTab('primary')}>
-            Home
+          <div className={tabClassName('plan', activeTab)} onClick={() => setActiveTab('plan')}>
+            Plan
           </div>
           <div className={tabClassName('mortgage', activeTab)} onClick={() => setActiveTab('mortgage')}>
             Mortgage

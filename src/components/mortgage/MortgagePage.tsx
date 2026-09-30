@@ -163,8 +163,8 @@ export function MortgagePage({ baseInputs, ranges, onChange, answers }: Readonly
       <div className="app-shell">
         <div className="app-shell__main">
           <p className="mortgage-page__empty">
-            You've told the Home tab you rent, not own — the mortgage calculator applies once you own a home. Switch
-            the housing toggle on the Home tab to see it here.
+            You've told the Plan tab you rent, not own — the mortgage calculator applies once you own a home. Switch
+            the housing toggle on the Plan tab to see it here.
           </p>
         </div>
       </div>
