@@ -44,6 +44,9 @@ function App() {
   // "review my answers" affordance (Story 8) or "+ new plan" (Story 9) can reopen this even once
   // onboardingComplete is already true, without it snapping back shut on the next render.
   const [questionnaireOpen, setQuestionnaireOpen] = useState(() => !draft.onboardingComplete);
+  // 'question' for a mid-plan review (Story 8) - skips the welcome screen's first-time marketing
+  // copy since every field is already prefilled from the existing draft, not a fresh plan.
+  const [questionnaireInitialScreen, setQuestionnaireInitialScreen] = useState<'welcome' | 'question'>('welcome');
 
   /** Which saved plan (if any) the current draft was loaded from/saved as, plus a snapshot of its
    *  content at that moment - together these drive the "which plan, and is it modified" indicator
@@ -271,6 +274,7 @@ function App() {
         salaryRaiseControls={primaryIncomeControls}
         partnerSalaryRaiseControls={partnerIncomeControls}
         childrenControls={childrenControls}
+        initialScreen={questionnaireInitialScreen}
         onFinish={() => {
           draft.completeOnboarding();
           setQuestionnaireOpen(false);
@@ -313,7 +317,12 @@ function App() {
             canRedo={draft.canRedo}
             isAutosaving={draft.isAutosaving}
           />
-          <SettingsMenu />
+          <SettingsMenu
+            onReviewAnswers={() => {
+              setQuestionnaireInitialScreen('question');
+              setQuestionnaireOpen(true);
+            }}
+          />
         </div>
       </div>
 

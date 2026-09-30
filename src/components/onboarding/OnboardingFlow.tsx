@@ -26,6 +26,10 @@ interface OnboardingFlowProps {
    *  (App.tsx) owns marking the plan onboarded and switching to the Plan tab; this component only
    *  knows about walking questions, not what "done" means for the rest of the app. */
   onFinish: () => void;
+  /** 'question' skips the welcome screen and drops straight into the first section - used when
+   *  reopening for a review (Story 8), where the marketing-copy intro doesn't apply and every field
+   *  is already prefilled from the existing draft. Defaults to 'welcome' for first-time onboarding. */
+  initialScreen?: Screen;
 }
 
 function repeatableVisibleFor(section: QuestionnaireSection | undefined, answers: Answers): RepeatableStep | undefined {
@@ -68,8 +72,9 @@ export function OnboardingFlow({
   partnerSalaryRaiseControls,
   childrenControls,
   onFinish,
+  initialScreen = 'welcome',
 }: Readonly<OnboardingFlowProps>) {
-  const [screen, setScreen] = useState<Screen>('welcome');
+  const [screen, setScreen] = useState<Screen>(initialScreen);
   const [sectionIndex, setSectionIndex] = useState(0);
   const [questionIndex, setQuestionIndex] = useState(0);
   // Set when a question was reached via a summary screen's Edit link - Next then returns straight
