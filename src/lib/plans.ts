@@ -19,6 +19,13 @@ export interface Plan {
   partnerSalaryRaises: SalaryRaiseBreakpoint[];
   partnerJobLossYear: number | undefined;
   children: Child[];
+  /** Whether this plan has been through the onboarding questionnaire (or had it explicitly
+   *  skipped) - drives whether App.tsx shows the welcome/questionnaire flow or the normal tabs.
+   *  Only ever `false` for a genuinely fresh, never-touched plan (see freshPlan below); every other
+   *  loading path (autosaved draft, named Save/Load) defaults a missing value to `true` so a plan
+   *  that predates this field - or an already-answered plan being loaded - never gets forced back
+   *  through onboarding. See loadDraft (useDraftState.ts) and loadSavedPlan below. */
+  onboardingComplete: boolean;
 }
 
 export function freshPlan(): Plan {
@@ -31,6 +38,7 @@ export function freshPlan(): Plan {
     partnerSalaryRaises: [],
     partnerJobLossYear: undefined,
     children: [],
+    onboardingComplete: false,
   };
 }
 
@@ -81,6 +89,9 @@ export function isValidPlan(value: unknown): value is Plan {
     return false;
   }
   if (plan.partnerJobLossYear !== undefined && !isValidJobLossYear(plan.partnerJobLossYear)) {
+    return false;
+  }
+  if (plan.onboardingComplete !== undefined && typeof plan.onboardingComplete !== 'boolean') {
     return false;
   }
   return true;
@@ -145,5 +156,5 @@ export function loadSavedPlan(name: string): Plan | null {
   if (!plan) {
     return null;
   }
-  return { ...plan, baseInputs: withBaseInputDefaults(plan.baseInputs) };
+  return { ...plan, baseInputs: withBaseInputDefaults(plan.baseInputs), onboardingComplete: plan.onboardingComplete ?? true };
 }

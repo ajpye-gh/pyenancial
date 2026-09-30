@@ -54,7 +54,22 @@ function loadDraft(): Plan {
       ...(typeof baseInputsValue === 'object' && baseInputsValue !== null ? baseInputsValue : {}),
     };
 
-    return { answers, baseInputs, goals, salaryRaises, jobLossYear, partnerSalaryRaises, partnerJobLossYear, children };
+    // Missing means this draft predates the onboarding flow - grandfather it straight in as
+    // already-set-up rather than forcing an existing user back through the questionnaire. A
+    // genuinely fresh draft never reaches this branch (no `raw` at all - see the early return above).
+    const onboardingComplete = typeof record.onboardingComplete === 'boolean' ? record.onboardingComplete : true;
+
+    return {
+      answers,
+      baseInputs,
+      goals,
+      salaryRaises,
+      jobLossYear,
+      partnerSalaryRaises,
+      partnerJobLossYear,
+      children,
+      onboardingComplete,
+    };
   } catch {
     // Corrupt/inaccessible localStorage - autosave is best-effort, fall back to a fresh draft.
     return fresh;
@@ -92,6 +107,10 @@ export interface UseDraftStateResult {
   planForSaving: () => Plan;
   /** Replaces the entire draft with a loaded plan (see lib/plans.ts). */
   loadPlan: (plan: Plan) => void;
+  onboardingComplete: boolean;
+  /** Marks the questionnaire as done (finished normally or skipped) - idempotent, safe to call even
+   *  if already `true`. Doesn't touch any other field. */
+  completeOnboarding: () => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -284,6 +303,12 @@ export function useDraftState(): UseDraftStateResult {
     updateDraft(plan);
   }, [updateDraft]);
 
+  const completeOnboarding = useCallback(() => {
+    updateDraft((next) => {
+      next.onboardingComplete = true;
+    });
+  }, [updateDraft]);
+
   const undo = useCallback(() => back(), [back]);
   const redo = useCallback(() => forward(), [forward]);
 
@@ -316,6 +341,8 @@ export function useDraftState(): UseDraftStateResult {
     updateChild,
     planForSaving,
     loadPlan,
+    onboardingComplete: draft.onboardingComplete,
+    completeOnboarding,
     undo,
     redo,
     canUndo,

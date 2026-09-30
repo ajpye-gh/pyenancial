@@ -1,4 +1,4 @@
-import { filingStatus, ownsHome, socialSecurityEnabled, ssWithdrawalBridgeEnabled } from '@src/lib/questions';
+import { filingStatus, hasKids, hasPartnerIncome, ownsHome, socialSecurityEnabled, ssWithdrawalBridgeEnabled } from '@src/lib/questions';
 
 describe('ownsHome', () => {
   it('is true only when housing is answered "own"', () => {
@@ -31,6 +31,28 @@ describe('socialSecurityEnabled', () => {
 
   it('is true when explicitly turned on', () => {
     expect(socialSecurityEnabled({ socialSecurityEnabled: true })).toBe(true);
+  });
+});
+
+describe('hasPartnerIncome', () => {
+  it('defaults to false when unset', () => {
+    expect(hasPartnerIncome({})).toBe(false);
+  });
+
+  it('is true only when explicitly answered true', () => {
+    expect(hasPartnerIncome({ hasPartnerIncome: true })).toBe(true);
+    expect(hasPartnerIncome({ hasPartnerIncome: false })).toBe(false);
+  });
+});
+
+describe('hasKids', () => {
+  it('defaults to false when unset', () => {
+    expect(hasKids({})).toBe(false);
+  });
+
+  it('is true only when explicitly answered true', () => {
+    expect(hasKids({ hasKids: true })).toBe(true);
+    expect(hasKids({ hasKids: false })).toBe(false);
   });
 });
 
