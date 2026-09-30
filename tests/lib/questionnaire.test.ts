@@ -17,10 +17,19 @@ describe('visibleSections', () => {
     expect(visibleSections(QUESTIONNAIRE_SECTIONS, { housing: 'own' }).some((section) => section.id === 'housing-mortgage')).toBe(true);
   });
 
-  it('always includes the Getting started, Income, Expenses, Other assets, and Assumptions sections', () => {
+  it('always includes the Getting started, Income, Expenses, Other assets, Assumptions, and retirement-branch sections', () => {
     const sections = visibleSections(QUESTIONNAIRE_SECTIONS, {});
     const ids = sections.map((section) => section.id);
-    expect(ids).toEqual(['getting-started', 'income', 'expenses', 'other-assets', 'assumptions']);
+    expect(ids).toEqual(['getting-started', 'income', 'expenses', 'other-assets', 'assumptions', 'retirement-branch']);
+  });
+
+  it('excludes the retirement sections until retirementNow is answered true, then includes all five in order', () => {
+    const withoutRetirement = visibleSections(QUESTIONNAIRE_SECTIONS, {});
+    expect(withoutRetirement.some((section) => section.id.startsWith('retirement-') && section.id !== 'retirement-branch')).toBe(false);
+
+    const withRetirement = visibleSections(QUESTIONNAIRE_SECTIONS, { retirementNow: true });
+    const retirementIds = withRetirement.map((section) => section.id).filter((id) => id.startsWith('retirement-') && id !== 'retirement-branch');
+    expect(retirementIds).toEqual(['retirement-age', 'retirement-roth', 'retirement-traditional', 'retirement-after-tax', 'retirement-income']);
   });
 
   it('drops a section entirely if every one of its questions gets filtered out', () => {

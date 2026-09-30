@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { useState } from 'react';
 import { OnboardingFlow } from '@src/components/onboarding/OnboardingFlow';
 import { DEFAULT_BASE_RANGES, baseDefaults } from '@src/lib/baseData';
@@ -52,6 +52,39 @@ function Harness({ onFinish }: Readonly<{ onFinish: () => void }>) {
       onFinish={onFinish}
     />
   );
+}
+
+/** Walks Start -> Getting started (Rent/No/No) -> Income -> Expenses -> Other assets ->
+ *  Assumptions, skipping every repeatable "add another" step, landing on the retirement branch
+ *  question ("Do you want to plan for retirement now?"). Renting (rather than owning) skips the
+ *  8-field Housing & mortgage details section so the walk stays short. */
+async function walkToRetirementBranch(user: UserEvent) {
+  await user.click(screen.getByRole('button', { name: 'Start' }));
+  await user.click(screen.getByRole('button', { name: 'Rent' }));
+  await user.click(screen.getByRole('button', { name: 'No' })); // hasPartnerIncome
+  await user.click(screen.getByRole('button', { name: 'No' })); // hasKids
+  await user.click(screen.getByRole('button', { name: 'Continue' })); // Getting started -> Income
+
+  for (let i = 0; i < 4; i += 1) {
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+  }
+  await user.click(screen.getByRole('button', { name: 'Done - continue' })); // salary milestones
+  await user.click(screen.getByRole('button', { name: 'Continue' })); // Income -> Expenses
+
+  for (let i = 0; i < 3; i += 1) {
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+  }
+  await user.click(screen.getByRole('button', { name: 'Continue' })); // Expenses -> Other assets
+
+  for (let i = 0; i < 2; i += 1) {
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+  }
+  await user.click(screen.getByRole('button', { name: 'Continue' })); // Other assets -> Assumptions
+
+  for (let i = 0; i < 3; i += 1) {
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+  }
+  await user.click(screen.getByRole('button', { name: 'Continue' })); // Assumptions -> retirement branch
 }
 
 describe('OnboardingFlow', () => {
@@ -147,5 +180,50 @@ describe('OnboardingFlow', () => {
     // No child-adding step - straight to the Expenses summary.
     expect(screen.getByRole('heading', { name: /expenses - your answers/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /add each child/i })).not.toBeInTheDocument();
+  });
+
+  it('reaches the retirement branch question with Yes/Later buttons after Assumptions', async () => {
+    const user = userEvent.setup();
+    render(<Harness onFinish={jest.fn()} />);
+    await walkToRetirementBranch(user);
+
+    expect(screen.getByRole('heading', { name: /plan for retirement now/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Yes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
+  });
+
+  it('"Later" finishes the questionnaire without entering the retirement sections', async () => {
+    const user = userEvent.setup();
+    const onFinish = jest.fn();
+    render(<Harness onFinish={onFinish} />);
+    await walkToRetirementBranch(user);
+
+    await user.click(screen.getByRole('button', { name: 'Later' }));
+    // Auto-advances to the branch section's own summary first (same as any other gating question).
+    expect(screen.getByText('Later')).toBeInTheDocument();
+    expect(onFinish).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(onFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it('"Yes" continues into the retirement questionnaire (Age, then Roth, ...)', async () => {
+    const user = userEvent.setup();
+    const onFinish = jest.fn();
+    render(<Harness onFinish={onFinish} />);
+    await walkToRetirementBranch(user);
+
+    await user.click(screen.getByRole('button', { name: 'Yes' }));
+    await user.click(screen.getByRole('button', { name: 'Continue' })); // branch summary -> Retirement age
+
+    expect(screen.getByRole('heading', { name: /current age/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByRole('heading', { name: /target retirement age/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(screen.getByRole('heading', { name: /retirement age - your answers/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.getByRole('heading', { name: /current roth savings/i })).toBeInTheDocument();
+    expect(onFinish).not.toHaveBeenCalled();
   });
 });

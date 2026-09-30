@@ -25,7 +25,8 @@ function displayValue(question: Question, answers: Answers, baseInputs: BaseInpu
   }
   const current = answers[question.id];
   if (question.type === 'boolean') {
-    return current === true ? 'Yes' : 'No';
+    const [trueLabel, falseLabel] = question.booleanLabels ?? ['Yes', 'No'];
+    return current === true ? trueLabel : falseLabel;
   }
   const option = question.options?.find((candidate) => candidate.value === current);
   return option?.label ?? '—';

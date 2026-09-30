@@ -25,7 +25,11 @@ function GatingQuestionBody({ question, answers, onAnswer, onNext }: Readonly<Pi
   };
   const current = answers[question.id];
 
-  const options = question.type === 'boolean' ? [{ label: 'Yes', value: true as const }, { label: 'No', value: false as const }] : (question.options ?? []).map((option) => ({ label: option.label, value: option.value }));
+  const [trueLabel, falseLabel] = question.booleanLabels ?? ['Yes', 'No'];
+  const options =
+    question.type === 'boolean'
+      ? [{ label: trueLabel, value: true as const }, { label: falseLabel, value: false as const }]
+      : (question.options ?? []).map((option) => ({ label: option.label, value: option.value }));
 
   return (
     <div className="onboarding-question__choices">
