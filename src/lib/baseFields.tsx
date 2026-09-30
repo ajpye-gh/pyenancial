@@ -291,6 +291,24 @@ export const MORTGAGE_INSPECT_YEAR_FIELD: BaseFieldMeta = {
   visibleIf: ownsHome,
 };
 
+/** The Mortgage page's own field groups, shared with the questionnaire's Housing & mortgage
+ *  details section (Story 5 in features.md) so both stay in sync with a single definition rather
+ *  than two copies of the same field lists. */
+export const MORTGAGE_DETAILS_GROUP: BaseFieldGroup = {
+  title: 'Mortgage',
+  fields: [HOME_VALUE_FIELD, MORTGAGE_BALANCE_FIELD, MORTGAGE_RATE_FIELD, MORTGAGE_TERM_FIELD],
+};
+
+export const TAXES_INSURANCE_GROUP: BaseFieldGroup = {
+  title: 'Taxes & insurance',
+  fields: [PROPERTY_TAX_FIELD, HOME_INSURANCE_FIELD, MORTGAGE_INSURANCE_FIELD],
+};
+
+export const EXTRA_PAYMENTS_GROUP: BaseFieldGroup = {
+  title: 'Extra payments',
+  fields: [MORTGAGE_EXTRA_PRINCIPAL_FIELD],
+};
+
 /** Rendered on the Retirement page's own sidebar/chart, not the primary page's ControlsPanel -
  *  same reasoning as INSPECT_YEAR_FIELD above, just a different page. Investment return and other
  *  assumptions used in the retirement projection are read straight from BASE_FIELD_GROUPS's

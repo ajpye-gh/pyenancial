@@ -11,6 +11,12 @@ describe('visibleSections', () => {
     expect(sections.some((section) => section.id === 'partner-income')).toBe(true);
   });
 
+  it('excludes the Housing & mortgage details section when renting/unanswered, includes it when owning', () => {
+    expect(visibleSections(QUESTIONNAIRE_SECTIONS, {}).some((section) => section.id === 'housing-mortgage')).toBe(false);
+    expect(visibleSections(QUESTIONNAIRE_SECTIONS, { housing: 'rent' }).some((section) => section.id === 'housing-mortgage')).toBe(false);
+    expect(visibleSections(QUESTIONNAIRE_SECTIONS, { housing: 'own' }).some((section) => section.id === 'housing-mortgage')).toBe(true);
+  });
+
   it('always includes the Getting started, Income, Expenses, Other assets, and Assumptions sections', () => {
     const sections = visibleSections(QUESTIONNAIRE_SECTIONS, {});
     const ids = sections.map((section) => section.id);

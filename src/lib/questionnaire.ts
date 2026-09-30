@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { BASE_FIELD_GROUPS, type BaseFieldMeta } from './baseFields';
-import { hasKids, hasPartnerIncome, type Answers } from './questions';
+import { BASE_FIELD_GROUPS, EXTRA_PAYMENTS_GROUP, MORTGAGE_DETAILS_GROUP, TAXES_INSURANCE_GROUP, type BaseFieldMeta } from './baseFields';
+import { hasKids, hasPartnerIncome, ownsHome, type Answers } from './questions';
 
 /** A gating yes/no or own/rent-style question, written straight into `Answers` - the questionnaire
  *  generalization of SPEC.md's original 3-question `Question` interface (§4.2), now used for
@@ -123,6 +123,13 @@ export const QUESTIONNAIRE_SECTIONS: QuestionnaireSection[] = [
     title: 'Expenses',
     questions: sliderQuestions(fieldGroup('Expenses')),
     repeatable: { target: 'children', visibleIf: hasKids },
+  },
+  {
+    id: 'housing-mortgage',
+    kind: 'questions',
+    title: 'Housing & mortgage details',
+    questions: sliderQuestions([...MORTGAGE_DETAILS_GROUP.fields, ...TAXES_INSURANCE_GROUP.fields, ...EXTRA_PAYMENTS_GROUP.fields]),
+    visibleIf: ownsHome,
   },
   {
     id: 'other-assets',
