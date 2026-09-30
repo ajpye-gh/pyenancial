@@ -1,13 +1,17 @@
 import { useState } from 'react';
+import type { ChildBreakpointsProps } from '../controls/ChildBreakpoints';
+import type { SalaryRaiseBreakpointsProps } from '../controls/SalaryRaiseBreakpoints';
 import type { BaseFieldId } from '../../lib/baseFields';
 import type { BaseInputs, BaseRanges } from '../../lib/baseData';
+import { formatSliderValue } from '../../lib/format';
 import type { Answers } from '../../lib/questions';
-import { QUESTIONNAIRE_SECTIONS, visibleSections } from '../../lib/questionnaire';
+import { QUESTIONNAIRE_SECTIONS, visibleSections, type QuestionnaireSection, type RepeatableStep } from '../../lib/questionnaire';
 import { QuestionScreen } from './QuestionScreen';
+import { RepeatableStepScreen } from './RepeatableStepScreen';
 import { SectionSummary } from './SectionSummary';
 import { WelcomePage } from './WelcomePage';
 
-type Screen = 'welcome' | 'question' | 'summary';
+type Screen = 'welcome' | 'question' | 'repeatable' | 'summary';
 
 interface OnboardingFlowProps {
   answers: Answers;
@@ -15,17 +19,56 @@ interface OnboardingFlowProps {
   baseInputs: BaseInputs;
   ranges: BaseRanges;
   onChange: (id: BaseFieldId, value: number) => void;
+  salaryRaiseControls: SalaryRaiseBreakpointsProps;
+  partnerSalaryRaiseControls: SalaryRaiseBreakpointsProps;
+  childrenControls: ChildBreakpointsProps;
   /** Called once - on finishing the last section's summary, or on Skip at any point. The caller
    *  (App.tsx) owns marking the plan onboarded and switching to the Plan tab; this component only
    *  knows about walking questions, not what "done" means for the rest of the app. */
   onFinish: () => void;
 }
 
-/** Orchestrates the welcome screen -> one-question-at-a-time sections -> per-section summary flow
- *  (Stories 1-3 in features.md). Sections/questions are recomputed live from `visibleSections` on
- *  every render, so answering a gating question immediately changes what's ahead - same rule the
- *  sidebar already applies via visibleBaseFieldGroups. */
-export function OnboardingFlow({ answers, onAnswer, baseInputs, ranges, onChange, onFinish }: Readonly<OnboardingFlowProps>) {
+function repeatableVisibleFor(section: QuestionnaireSection | undefined, answers: Answers): RepeatableStep | undefined {
+  if (!section?.repeatable) {
+    return undefined;
+  }
+  return !section.repeatable.visibleIf || section.repeatable.visibleIf(answers) ? section.repeatable : undefined;
+}
+
+function repeatableSummaryRows(
+  step: RepeatableStep | undefined,
+  salaryRaiseControls: SalaryRaiseBreakpointsProps,
+  partnerSalaryRaiseControls: SalaryRaiseBreakpointsProps,
+  childrenControls: ChildBreakpointsProps,
+): { label: string; value: string }[] | undefined {
+  if (!step) {
+    return undefined;
+  }
+  if (step.target === 'salaryRaises') {
+    return salaryRaiseControls.breakpoints.map((b) => ({ label: `Income milestone, yr ${b.year}`, value: formatSliderValue(b.incomeK, 'k') }));
+  }
+  if (step.target === 'partnerSalaryRaises') {
+    return partnerSalaryRaiseControls.breakpoints.map((b) => ({ label: `Income milestone, yr ${b.year}`, value: formatSliderValue(b.incomeK, 'k') }));
+  }
+  return childrenControls.kids.map((child) => ({ label: 'Child', value: child.year === 0 ? 'Already here' : `Arrives yr ${child.year}` }));
+}
+
+/** Orchestrates the welcome screen -> one-question-at-a-time sections (with an optional
+ *  repeatable "add another" step) -> per-section summary flow (Stories 1-4 in features.md).
+ *  Sections/questions are recomputed live from `visibleSections` on every render, so answering a
+ *  gating question immediately changes what's ahead - same rule the sidebar already applies via
+ *  visibleBaseFieldGroups. */
+export function OnboardingFlow({
+  answers,
+  onAnswer,
+  baseInputs,
+  ranges,
+  onChange,
+  salaryRaiseControls,
+  partnerSalaryRaiseControls,
+  childrenControls,
+  onFinish,
+}: Readonly<OnboardingFlowProps>) {
   const [screen, setScreen] = useState<Screen>('welcome');
   const [sectionIndex, setSectionIndex] = useState(0);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -35,6 +78,7 @@ export function OnboardingFlow({ answers, onAnswer, baseInputs, ranges, onChange
 
   const sections = visibleSections(QUESTIONNAIRE_SECTIONS, answers);
   const currentSection = sections[Math.min(sectionIndex, sections.length - 1)];
+  const activeRepeatable = repeatableVisibleFor(currentSection, answers);
   const totalQuestions = sections.reduce((sum, section) => sum + section.questions.length, 0);
   const questionsBefore = sections.slice(0, sectionIndex).reduce((sum, section) => sum + section.questions.length, 0);
   const progressPercent =
@@ -50,12 +94,30 @@ export function OnboardingFlow({ answers, onAnswer, baseInputs, ranges, onChange
     }
     if (questionIndex + 1 < currentSection.questions.length) {
       setQuestionIndex(questionIndex + 1);
+    } else if (activeRepeatable) {
+      setScreen('repeatable');
     } else {
       setScreen('summary');
     }
   };
 
+  const handleRepeatableContinue = () => setScreen('summary');
+
   const handleBack = () => {
+    if (screen === 'summary') {
+      if (activeRepeatable) {
+        setScreen('repeatable');
+      } else {
+        setScreen('question');
+        setQuestionIndex(currentSection.questions.length - 1);
+      }
+      return;
+    }
+    if (screen === 'repeatable') {
+      setScreen('question');
+      setQuestionIndex(currentSection.questions.length - 1);
+      return;
+    }
     if (questionIndex > 0) {
       setQuestionIndex(questionIndex - 1);
     } else if (sectionIndex > 0) {
@@ -117,8 +179,26 @@ export function OnboardingFlow({ answers, onAnswer, baseInputs, ranges, onChange
         </>
       )}
 
+      {screen === 'repeatable' && activeRepeatable && (
+        <RepeatableStepScreen
+          step={activeRepeatable}
+          salaryRaiseControls={salaryRaiseControls}
+          partnerSalaryRaiseControls={partnerSalaryRaiseControls}
+          childrenControls={childrenControls}
+          onContinue={handleRepeatableContinue}
+        />
+      )}
+
       {screen === 'summary' && currentSection && (
-        <SectionSummary section={currentSection} answers={answers} baseInputs={baseInputs} onEdit={handleSummaryEdit} onContinue={handleSummaryContinue} />
+        <SectionSummary
+          section={currentSection}
+          answers={answers}
+          baseInputs={baseInputs}
+          onEdit={handleSummaryEdit}
+          onContinue={handleSummaryContinue}
+          repeatableRows={repeatableSummaryRows(activeRepeatable, salaryRaiseControls, partnerSalaryRaiseControls, childrenControls)}
+          onEditRepeatable={activeRepeatable ? () => setScreen('repeatable') : undefined}
+        />
       )}
     </div>
   );

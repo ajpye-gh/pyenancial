@@ -268,6 +268,9 @@ function App() {
         baseInputs={draft.baseInputs}
         ranges={DEFAULT_BASE_RANGES}
         onChange={draft.setBaseInput}
+        salaryRaiseControls={primaryIncomeControls}
+        partnerSalaryRaiseControls={partnerIncomeControls}
+        childrenControls={childrenControls}
         onFinish={() => {
           draft.completeOnboarding();
           setQuestionnaireOpen(false);

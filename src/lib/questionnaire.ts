@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BASE_FIELD_GROUPS, type BaseFieldMeta } from './baseFields';
-import { hasPartnerIncome, type Answers } from './questions';
+import { hasKids, hasPartnerIncome, type Answers } from './questions';
 
 /** A gating yes/no or own/rent-style question, written straight into `Answers` - the questionnaire
  *  generalization of SPEC.md's original 3-question `Question` interface (§4.2), now used for
@@ -25,6 +25,18 @@ export interface SliderQuestion {
 
 export type Question = GatingQuestion | SliderQuestion;
 
+/** A repeatable "add another" step rendered after a section's last question and before its
+ *  summary - salary-raise breakpoints and children are dynamic lists, not scalar fields, so they
+ *  don't fit the one-Question-per-screen shape above (see Story 4 in features.md). The engine
+ *  (OnboardingFlow) renders the matching editor for `target`; this type only says which one and
+ *  whether it applies right now. */
+export interface RepeatableStep {
+  target: 'salaryRaises' | 'partnerSalaryRaises' | 'children';
+  /** Step is skipped unless this returns true (e.g. children only when hasKids). Always shown if
+   *  omitted. */
+  visibleIf?: (answers: Answers) => boolean;
+}
+
 export interface QuestionSection {
   id: string;
   kind: 'questions';
@@ -33,6 +45,7 @@ export interface QuestionSection {
   /** Section is skipped entirely (and excluded from the progress count) unless this returns true.
    *  Always shown if omitted. */
   visibleIf?: (answers: Answers) => boolean;
+  repeatable?: RepeatableStep;
 }
 
 export type QuestionnaireSection = QuestionSection;
@@ -94,6 +107,7 @@ export const QUESTIONNAIRE_SECTIONS: QuestionnaireSection[] = [
     kind: 'questions',
     title: 'Income',
     questions: sliderQuestions(fieldGroup('Income')),
+    repeatable: { target: 'salaryRaises' },
   },
   {
     id: 'partner-income',
@@ -101,12 +115,14 @@ export const QUESTIONNAIRE_SECTIONS: QuestionnaireSection[] = [
     title: 'Partner income',
     questions: sliderQuestions(fieldGroup('Partner income')),
     visibleIf: hasPartnerIncome,
+    repeatable: { target: 'partnerSalaryRaises' },
   },
   {
     id: 'expenses',
     kind: 'questions',
     title: 'Expenses',
     questions: sliderQuestions(fieldGroup('Expenses')),
+    repeatable: { target: 'children', visibleIf: hasKids },
   },
   {
     id: 'other-assets',

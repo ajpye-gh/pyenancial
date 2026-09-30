@@ -11,6 +11,12 @@ interface SectionSummaryProps {
    *  rather than re-walking every question after it - see OnboardingFlow's `returnToSummary`. */
   onEdit: (questionIndex: number) => void;
   onContinue: () => void;
+  /** One row per entry in the section's repeatable step (salary-raise breakpoints / children), if
+   *  it applies and has anything to show - see OnboardingFlow's repeatableSummaryRows. */
+  repeatableRows?: { label: string; value: string }[];
+  /** Jumps to the repeatable step's own screen - a single edit affordance for the whole list
+   *  rather than per-row, since it's all one screen. Only relevant when repeatableRows is set. */
+  onEditRepeatable?: () => void;
 }
 
 function displayValue(question: Question, answers: Answers, baseInputs: BaseInputs): string {
@@ -31,7 +37,15 @@ function questionLabel(question: Question): string {
 
 /** Shown at the end of every section - lets the user see what they just entered and jump back to
  *  fix any single answer without re-walking the whole section. See Story 3 in features.md. */
-export function SectionSummary({ section, answers, baseInputs, onEdit, onContinue }: Readonly<SectionSummaryProps>) {
+export function SectionSummary({
+  section,
+  answers,
+  baseInputs,
+  onEdit,
+  onContinue,
+  repeatableRows,
+  onEditRepeatable,
+}: Readonly<SectionSummaryProps>) {
   return (
     <div className="onboarding-card">
       <h2 className="onboarding-question__prompt">{section.title} - your answers</h2>
@@ -43,6 +57,17 @@ export function SectionSummary({ section, answers, baseInputs, onEdit, onContinu
             <button type="button" className="onboarding-summary__edit" onClick={() => onEdit(index)}>
               Edit
             </button>
+          </li>
+        ))}
+        {repeatableRows?.map((row, index) => (
+          <li key={`repeatable-${index}`} className="onboarding-summary__row">
+            <span className="onboarding-summary__label">{row.label}</span>
+            <span className="onboarding-summary__value">{row.value}</span>
+            {index === 0 && onEditRepeatable && (
+              <button type="button" className="onboarding-summary__edit" onClick={onEditRepeatable}>
+                Edit
+              </button>
+            )}
           </li>
         ))}
       </ul>
