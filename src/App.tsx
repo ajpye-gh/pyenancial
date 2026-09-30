@@ -79,6 +79,14 @@ function App() {
     setSavedSnapshot(null);
   };
 
+  const handlePlanCreated = (name: string, plan: Plan) => {
+    draft.loadPlan(plan);
+    setActivePlanName(name);
+    setSavedSnapshot(JSON.stringify(plan));
+    setQuestionnaireInitialScreen('welcome');
+    setQuestionnaireOpen(true);
+  };
+
   const primaryIncomeControls: SalaryRaiseBreakpointsProps = {
     breakpoints: draft.salaryRaises,
     salaryY0K: draft.baseInputs.salaryY0K,
@@ -309,6 +317,7 @@ function App() {
             onPlanLoaded={handlePlanLoaded}
             onPlanSaved={handlePlanSaved}
             onPlanDeleted={handlePlanDeleted}
+            onPlanCreated={handlePlanCreated}
             onImportPlan={handleImportPlan}
             planForSaving={draft.planForSaving}
             onUndo={draft.undo}

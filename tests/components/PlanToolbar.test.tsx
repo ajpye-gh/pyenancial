@@ -14,6 +14,7 @@ function renderToolbar(overrides: Partial<ComponentProps<typeof PlanToolbar>> = 
     onPlanLoaded: jest.fn(),
     onPlanSaved: jest.fn(),
     onPlanDeleted: jest.fn(),
+    onPlanCreated: jest.fn(),
     onImportPlan: jest.fn(),
     planForSaving: () => freshPlan(),
     onUndo: jest.fn(),
@@ -312,6 +313,69 @@ describe('PlanToolbar Saved Plans (load)', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(onPlanLoaded).toHaveBeenCalledWith('Base case', plan);
+  });
+});
+
+describe('PlanToolbar new plan', () => {
+  it('names, saves, and hands off a fresh plan', async () => {
+    const user = userEvent.setup();
+    const onPlanCreated = jest.fn();
+
+    // A named active plan skips the "back up my untitled draft first?" prompt (see the dedicated
+    // backup test below) so this test can go straight to the naming prompt it's actually about.
+    renderToolbar({ activePlanName: 'Existing plan', onPlanCreated });
+    await user.click(screen.getByRole('button', { name: 'New plan' }));
+    const { dialog, confirmWith } = await findPromptDialog();
+    expect(within(dialog).getByText('Name your new plan:')).toBeInTheDocument();
+    await confirmWith(user, 'Second plan', 'Create');
+
+    expect(listSavedPlans()).toEqual(['Second plan']);
+    expect(onPlanCreated).toHaveBeenCalledTimes(1);
+    const [name, plan] = onPlanCreated.mock.calls[0];
+    expect(name).toBe('Second plan');
+    // freshPlan() generates a random salary-raise breakpoint id each call, so compare everything
+    // except that one nondeterministic field instead of a second freshPlan() snapshot.
+    expect({ ...plan, salaryRaises: undefined }).toEqual({ ...freshPlan(), salaryRaises: undefined });
+    expect(plan.salaryRaises).toEqual([{ id: expect.any(String), year: 1, incomeK: 75 }]);
+    expect(loadSavedPlan('Second plan')).toEqual(plan);
+  });
+
+  it('does nothing if the naming prompt is cancelled', async () => {
+    const user = userEvent.setup();
+    const onPlanCreated = jest.fn();
+
+    renderToolbar({ activePlanName: 'Existing plan', onPlanCreated });
+    await user.click(screen.getByRole('button', { name: 'New plan' }));
+    const { cancelWith } = await findPromptDialog();
+    await cancelWith(user, 'Cancel');
+
+    expect(onPlanCreated).not.toHaveBeenCalled();
+    expect(listSavedPlans()).toEqual([]);
+  });
+
+  it('offers to back up an untitled draft first, same as Load', async () => {
+    const user = userEvent.setup();
+    const onPlanCreated = jest.fn();
+    const onPlanSaved = jest.fn();
+    const currentDraft: Plan = { ...freshPlan(), answers: { housing: 'rent' } };
+
+    renderToolbar({ activePlanName: null, onPlanCreated, onPlanSaved, planForSaving: () => currentDraft });
+    await user.click(screen.getByRole('button', { name: 'New plan' }));
+
+    const backupConfirm = await screen.findByRole('alertdialog');
+    expect(within(backupConfirm).getByText('Save your current changes as a new plan before loading?')).toBeInTheDocument();
+    await user.click(within(backupConfirm).getByRole('button', { name: 'Save as new plan' }));
+
+    const { confirmWith } = await findPromptDialog();
+    await confirmWith(user, 'My backup', 'Save');
+    expect(onPlanSaved).toHaveBeenCalledWith('My backup', currentDraft);
+
+    const { confirmWith: confirmNewPlanName } = await findPromptDialog();
+    await confirmNewPlanName(user, 'Second plan', 'Create');
+
+    expect(onPlanCreated).toHaveBeenCalledTimes(1);
+    const [name] = onPlanCreated.mock.calls[0];
+    expect(name).toBe('Second plan');
   });
 });
 

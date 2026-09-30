@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { useDialog } from '../hooks/useDialog';
-import { deletePlan, listSavedPlans, loadSavedPlan, savePlan, type Plan } from '../lib/plans';
+import { deletePlan, freshPlan, listSavedPlans, loadSavedPlan, savePlan, type Plan } from '../lib/plans';
 import { exportPlanFile, parsePlanFile, PYF_EXTENSION } from '../lib/planFiles';
-import { DownloadIcon, FolderIcon, PinwheelIcon, RedoIcon, SaveIcon, TrashIcon, UndoIcon, UploadIcon } from './icons';
+import { DownloadIcon, FolderIcon, PinwheelIcon, PlusIcon, RedoIcon, SaveIcon, TrashIcon, UndoIcon, UploadIcon } from './icons';
 
 /** Small grace period between the pointer leaving the Saved Plans trigger and the panel actually
  *  closing - without this, a fast diagonal move from the trigger toward the panel can register a
@@ -15,6 +15,9 @@ interface PlanToolbarProps {
   onPlanLoaded: (name: string, plan: Plan) => void;
   onPlanSaved: (name: string, plan: Plan) => void;
   onPlanDeleted: (name: string) => void;
+  /** A brand-new named plan was just created (the "+" action) - distinct from onPlanLoaded because
+   *  the caller also launches the questionnaire for it, rather than just switching the draft. */
+  onPlanCreated: (name: string, plan: Plan) => void;
   onImportPlan: (plan: Plan) => void;
   planForSaving: () => Plan;
   onUndo: () => void;
@@ -31,6 +34,7 @@ export function PlanToolbar({
   onPlanLoaded,
   onPlanSaved,
   onPlanDeleted,
+  onPlanCreated,
   onImportPlan,
   planForSaving,
   onUndo,
@@ -169,6 +173,27 @@ export function PlanToolbar({
     setPanelOpen(false);
   };
 
+  /** Starts a brand-new plan: names it first (same collision-handling prompt Save uses), backs up
+   *  the current untitled draft if it has unsaved changes (same safety net Load applies), then
+   *  saves a fresh default plan under that name and hands off to the caller, which also launches
+   *  the questionnaire (see App.tsx's handlePlanCreated). */
+  const handleNewPlan = async () => {
+    await backupUntitledDraft();
+    const name = await resolveSaveName('Name your new plan:', 'My plan', { confirmLabel: 'Create' });
+    if (!name) {
+      return;
+    }
+    try {
+      const plan = freshPlan();
+      savePlan(name, plan);
+      setSavedPlans(listSavedPlans());
+      onPlanCreated(name, plan);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create plan.');
+    }
+  };
+
   const handleDelete = async (name: string, event: MouseEvent) => {
     event.stopPropagation();
     const shouldDelete = await confirm(`Delete "${name}"?`, { confirmLabel: 'Delete', cancelLabel: 'Cancel', tone: 'danger' });
@@ -241,6 +266,10 @@ export function PlanToolbar({
       </button>
 
       <div className="plan-toolbar__divider" />
+
+      <button type="button" className="plan-toolbar__btn" title="New plan" aria-label="New plan" onClick={handleNewPlan}>
+        <PlusIcon size={16} />
+      </button>
 
       <div
         className="plan-toolbar__dropdown-wrap"

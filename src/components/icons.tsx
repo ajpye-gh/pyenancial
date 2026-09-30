@@ -123,6 +123,15 @@ export function SunIcon({ size = 14 }: Readonly<IconProps>) {
   );
 }
 
+export function PlusIcon({ size = 14 }: Readonly<IconProps>) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
 export function MoonIcon({ size = 14 }: Readonly<IconProps>) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
