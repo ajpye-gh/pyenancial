@@ -11,20 +11,17 @@ export function WelcomePage({ onStart, onSkip }: Readonly<WelcomePageProps>) {
     <div className="onboarding-card">
       <h1 className="onboarding-welcome__title">Welcome to Pyenancial</h1>
       <p className="onboarding-welcome__body">
-        Pyenancial projects your household's cash flow over the next several years - income, expenses, savings goals, and retirement
-        drawdown - so you can see whether your plan actually works, and where the tradeoffs are.
+        See if your money plan actually holds up - income, savings, goals, retirement, all in one place.
       </p>
       <p className="onboarding-welcome__body">
-        We'll walk you through a short guided setup, one question at a time, to fill in your numbers. Each question explains what it's
-        for and why it matters. You can go back and change an earlier answer at any point, and skip the rest whenever you'd rather just
-        see the plan with defaults filled in.
+        A few quick questions to get your numbers in. Go back and change anything, or jump straight to the plan with defaults.
       </p>
       <div className="onboarding-welcome__actions">
         <button type="button" className="primary" onClick={onStart}>
           Start
         </button>
         <button type="button" onClick={onSkip}>
-          Skip questionnaire
+          Finish later
         </button>
       </div>
     </div>

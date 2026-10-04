@@ -93,14 +93,14 @@ describe('OnboardingFlow', () => {
     render(<Harness onFinish={jest.fn()} />);
     expect(screen.getByRole('heading', { name: /welcome to pyenancial/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Skip questionnaire' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finish later' })).toBeInTheDocument();
   });
 
   it('Skip on the welcome screen calls onFinish immediately', async () => {
     const user = userEvent.setup();
     const onFinish = jest.fn();
     render(<Harness onFinish={onFinish} />);
-    await user.click(screen.getByRole('button', { name: 'Skip questionnaire' }));
+    await user.click(screen.getByRole('button', { name: 'Finish later' }));
     expect(onFinish).toHaveBeenCalledTimes(1);
   });
 

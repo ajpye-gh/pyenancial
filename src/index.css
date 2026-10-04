@@ -1891,6 +1891,13 @@ input.slider-field__value-input {
 .onboarding-card {
   width: 100%;
   max-width: 560px;
+  /* Bounded + internally scrollable rather than growing past the viewport - a long tooltip (e.g.
+   * Social Security start age, Initial monthly withdrawal) on a short window would otherwise push
+   * the Next/Continue button below the fold with no visible cue to scroll for it. The action row
+   * (.onboarding-question__actions/__choices below) stays pinned to the card's bottom instead of
+   * scrolling away with the rest of the content, so it's always reachable without hunting. */
+  max-height: calc(100svh - 140px);
+  overflow-y: auto;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1902,6 +1909,7 @@ input.slider-field__value-input {
 
   @media (max-width: 640px) {
     padding: 20px;
+    max-height: calc(100svh - 120px);
   }
 }
 
@@ -1927,6 +1935,10 @@ input.slider-field__value-input {
   align-items: center;
   gap: 12px;
   margin-top: 8px;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding-top: 8px;
 }
 
 .onboarding-question__meta {
@@ -1954,12 +1966,23 @@ input.slider-field__value-input {
 .onboarding-question__actions {
   display: flex;
   justify-content: flex-end;
+  /* Pinned to the bottom of .onboarding-card's scroll area (see its own comment) rather than
+   * scrolling away with the tooltip/slider above it - opaque background so scrolled content can't
+   * show through behind it as it passes underneath. */
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding-top: 8px;
 }
 
 .onboarding-question__choices {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding-top: 8px;
 }
 
 .onboarding-choice {

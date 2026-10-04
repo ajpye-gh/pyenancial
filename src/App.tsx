@@ -189,7 +189,26 @@ function App() {
   ];
 
   let activeTabContent: ReactNode;
-  if (activeTab === 'plan') {
+  if (questionnaireOpen) {
+    activeTabContent = (
+      <OnboardingFlow
+        answers={draft.answers}
+        onAnswer={draft.setAnswer}
+        baseInputs={draft.baseInputs}
+        ranges={DEFAULT_BASE_RANGES}
+        onChange={draft.setBaseInput}
+        salaryRaiseControls={primaryIncomeControls}
+        partnerSalaryRaiseControls={partnerIncomeControls}
+        childrenControls={childrenControls}
+        initialScreen={questionnaireInitialScreen}
+        onFinish={() => {
+          draft.completeOnboarding();
+          setQuestionnaireOpen(false);
+          setActiveTab('plan');
+        }}
+      />
+    );
+  } else if (activeTab === 'plan') {
     activeTabContent = (
       <div className="app-shell" data-mobile-tab={mobileTab}>
         <aside className="app-shell__sidebar">
@@ -267,27 +286,6 @@ function App() {
         onChange={draft.setBaseInput}
         answers={draft.answers}
         onAnswer={draft.setAnswer}
-      />
-    );
-  }
-
-  if (questionnaireOpen) {
-    return (
-      <OnboardingFlow
-        answers={draft.answers}
-        onAnswer={draft.setAnswer}
-        baseInputs={draft.baseInputs}
-        ranges={DEFAULT_BASE_RANGES}
-        onChange={draft.setBaseInput}
-        salaryRaiseControls={primaryIncomeControls}
-        partnerSalaryRaiseControls={partnerIncomeControls}
-        childrenControls={childrenControls}
-        initialScreen={questionnaireInitialScreen}
-        onFinish={() => {
-          draft.completeOnboarding();
-          setQuestionnaireOpen(false);
-          setActiveTab('plan');
-        }}
       />
     );
   }

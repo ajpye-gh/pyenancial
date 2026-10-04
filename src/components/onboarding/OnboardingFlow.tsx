@@ -177,7 +177,7 @@ export function OnboardingFlow({
             <div className="onboarding-progress__fill" style={{ width: `${progressPercent}%` }} />
           </div>
           <button type="button" className="onboarding-skip" onClick={onFinish}>
-            Skip questionnaire
+            Finish later
           </button>
         </div>
       )}

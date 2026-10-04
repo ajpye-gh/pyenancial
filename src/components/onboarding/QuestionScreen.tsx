@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { BaseFieldId } from '../../lib/baseFields';
 import type { BaseInputs, BaseRanges } from '../../lib/baseData';
 import { formatSliderValue } from '../../lib/format';
@@ -20,7 +21,21 @@ interface QuestionScreenProps {
 }
 
 function GatingQuestionBody({ question, answers, onAnswer, onNext }: Readonly<Pick<QuestionScreenProps, 'answers' | 'onAnswer' | 'onNext'> & { question: Extract<Question, { kind: 'answer' }> }>) {
+  // Guards against a second selection firing before the first has re-rendered this screen away -
+  // e.g. a fast double-click or a bouncy trackpad/mouse. onAnswer triggers a useTravel setState,
+  // which throws if called twice in the same render cycle (its "already called" flag only resets
+  // in a useEffect, i.e. after the next commit) - an uncaught throw there freezes the whole app,
+  // which looks exactly like the click "did nothing".
+  const selectedRef = useRef(false);
+  useEffect(() => {
+    selectedRef.current = false;
+  }, [question.id]);
+
   const select = (value: boolean | string) => {
+    if (selectedRef.current) {
+      return;
+    }
+    selectedRef.current = true;
     onAnswer(question.id, value);
     onNext();
   };
