@@ -25,9 +25,12 @@ const APR_RANGE = { min: 0, max: 30, step: 0.1 };
 const MIN_PAYMENT_RANGE = { min: 0, max: 2000, step: 10 };
 
 /** Collapsed cards are height-capped (see .goal-card--collapsed, reused here) so a long debt list
- *  stays scannable - same treatment as GoalCard. */
+ *  stays scannable - same treatment as GoalCard. The extra `.debt-card--collapsed` override bumps
+ *  that cap back up just enough to fit the payoff-order badge (GoalCard has no such badge, so its
+ *  own 100px cap fits header+summary alone - adding the badge on top without raising it clipped the
+ *  balance/APR summary line underneath). */
 function cardClassName(isExpanded: boolean): string {
-  return isExpanded ? 'goal-card' : 'goal-card goal-card--collapsed';
+  return isExpanded ? 'goal-card' : 'goal-card goal-card--collapsed debt-card--collapsed';
 }
 
 /** Same collapse/expand + inline-rename shell as GoalCard.tsx, without any of its category/

@@ -1323,6 +1323,11 @@ input.slider-field__value-input {
   margin-bottom: 6px;
 }
 
+/* Overrides .goal-card--collapsed's 100px cap - see DebtCard.tsx's cardClassName comment. */
+.debt-card--collapsed {
+  max-height: 132px;
+}
+
 .debt-control__readout {
   display: flex;
   align-items: center;
