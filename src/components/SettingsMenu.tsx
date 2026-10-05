@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../hooks/useTheme';
-import { GearIcon, MoonIcon, SunIcon } from './icons';
+import { EditIcon, GearIcon, MoonIcon, SunIcon } from './icons';
+
+interface SettingsMenuProps {
+  /** Reopens the guided setup flow, seeded with the current draft's answers rather than a fresh
+   *  plan - see Story 8 in features.md. Deliberately not framed as "restart"/"reset" anywhere in
+   *  the UI, since nothing is cleared until the user actually changes a value. */
+  onReviewAnswers: () => void;
+}
 
 /** Gear icon + dropdown panel for app-wide settings, styled after PlanToolbar's Saved Plans
- *  dropdown. Currently just the dark mode toggle, but gives future settings a home. */
-export function SettingsMenu() {
+ *  dropdown. */
+export function SettingsMenu({ onReviewAnswers }: Readonly<SettingsMenuProps>) {
   const { theme, toggleTheme } = useTheme();
   const [panelOpen, setPanelOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -46,6 +53,20 @@ export function SettingsMenu() {
       </button>
       {panelOpen && (
         <div className="settings-menu__panel plan-toolbar__panel" role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            className="settings-menu__row"
+            onClick={() => {
+              setPanelOpen(false);
+              onReviewAnswers();
+            }}
+          >
+            <span className="settings-menu__row-label">
+              <EditIcon size={14} />
+              Review my answers
+            </span>
+          </button>
           <button
             type="button"
             role="menuitemcheckbox"

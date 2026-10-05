@@ -6,6 +6,20 @@ export function ownsHome(answers: Answers): boolean {
   return answers.housing === 'own';
 }
 
+/** Defaults to false (no partner income) when unset - these two only exist to let the
+ *  questionnaire (lib/questionnaire.ts) skip whole sections that don't apply; they don't gate
+ *  anything on the sidebar itself (Partner income/Expenses stay always-visible there, same as
+ *  before this field existed - a $0 default already covers "doesn't apply" for the sidebar). */
+export function hasPartnerIncome(answers: Answers): boolean {
+  return answers.hasPartnerIncome === true;
+}
+
+/** Defaults to false (no kids) when unset - see hasPartnerIncome above for why this doesn't touch
+ *  sidebar visibility, only the questionnaire's section skipping. */
+export function hasKids(answers: Answers): boolean {
+  return answers.hasKids === true;
+}
+
 /** Defaults to 'single' when unset - consistent with partner fields already defaulting to "no
  *  partner" (partnerSalaryY0K: 0) rather than assuming a partner exists. */
 export function filingStatus(answers: Answers): FilingStatus {
