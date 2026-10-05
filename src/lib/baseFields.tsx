@@ -291,6 +291,24 @@ export const MORTGAGE_INSPECT_YEAR_FIELD: BaseFieldMeta = {
   visibleIf: ownsHome,
 };
 
+/** The Mortgage page's own field groups, shared with the questionnaire's Housing & mortgage
+ *  details section (Story 5 in features.md) so both stay in sync with a single definition rather
+ *  than two copies of the same field lists. */
+export const MORTGAGE_DETAILS_GROUP: BaseFieldGroup = {
+  title: 'Mortgage',
+  fields: [HOME_VALUE_FIELD, MORTGAGE_BALANCE_FIELD, MORTGAGE_RATE_FIELD, MORTGAGE_TERM_FIELD],
+};
+
+export const TAXES_INSURANCE_GROUP: BaseFieldGroup = {
+  title: 'Taxes & insurance',
+  fields: [PROPERTY_TAX_FIELD, HOME_INSURANCE_FIELD, MORTGAGE_INSURANCE_FIELD],
+};
+
+export const EXTRA_PAYMENTS_GROUP: BaseFieldGroup = {
+  title: 'Extra payments',
+  fields: [MORTGAGE_EXTRA_PRINCIPAL_FIELD],
+};
+
 /** Rendered on the Retirement page's own sidebar/chart, not the primary page's ControlsPanel -
  *  same reasoning as INSPECT_YEAR_FIELD above, just a different page. Investment return and other
  *  assumptions used in the retirement projection are read straight from BASE_FIELD_GROUPS's
@@ -451,6 +469,39 @@ export const RETIREMENT_INSPECT_AGE_FIELD: BaseFieldMeta = {
   label: 'Inspect age',
   format: 'n',
   tooltip: "Which age the breakdown table below shows - income (and whether an account has run dry) changes year to year, especially once you're retired.",
+};
+
+/** The Retirement page's own field groups, shared with the questionnaire's retirement branch
+ *  (Story 6 in features.md) so both stay in sync with a single definition rather than two copies
+ *  of the same field lists - same treatment as MORTGAGE_DETAILS_GROUP etc. above. */
+export const RETIREMENT_AGE_GROUP: BaseFieldGroup = {
+  title: 'Age',
+  fields: [RETIREMENT_CURRENT_AGE_FIELD, RETIREMENT_TARGET_AGE_FIELD],
+};
+
+export const RETIREMENT_ROTH_GROUP: BaseFieldGroup = {
+  title: 'Roth',
+  fields: [RETIREMENT_ROTH_SAVINGS_FIELD, RETIREMENT_ROTH_CONTRIBUTION_FIELD, RETIREMENT_ROTH_WITHDRAWAL_FIELD],
+};
+
+export const RETIREMENT_TRADITIONAL_GROUP: BaseFieldGroup = {
+  title: 'Traditional',
+  fields: [RETIREMENT_TRADITIONAL_SAVINGS_FIELD, RETIREMENT_TRADITIONAL_CONTRIBUTION_FIELD, RETIREMENT_TRADITIONAL_WITHDRAWAL_FIELD],
+};
+
+export const RETIREMENT_AFTER_TAX_GROUP: BaseFieldGroup = {
+  title: 'After-tax',
+  fields: [
+    RETIREMENT_AFTER_TAX_SAVINGS_FIELD,
+    RETIREMENT_AFTER_TAX_CONTRIBUTION_FIELD,
+    RETIREMENT_AFTER_TAX_WITHDRAWAL_FIELD,
+    RETIREMENT_AFTER_TAX_GAIN_FIELD,
+  ],
+};
+
+export const RETIREMENT_INCOME_GROUP: BaseFieldGroup = {
+  title: 'Income in retirement',
+  fields: [RETIREMENT_SOCIAL_SECURITY_FIELD, RETIREMENT_SOCIAL_SECURITY_START_AGE_FIELD, RETIREMENT_PENSION_FIELD, RETIREMENT_PENSION_START_AGE_FIELD],
 };
 
 export const ALL_BASE_FIELD_IDS: BaseFieldId[] = [

@@ -6,6 +6,7 @@ import { SliderField } from './components/controls/SliderField';
 import { GoalsPanel } from './components/goals/GoalsPanel';
 import { MobileSubTabs } from './components/MobileSubTabs';
 import { MortgagePage } from './components/mortgage/MortgagePage';
+import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
 import { PlanToolbar } from './components/PlanToolbar';
 import { RetirementPage } from './components/retirement/RetirementPage';
 import { SettingsMenu } from './components/SettingsMenu';
@@ -19,13 +20,14 @@ import { useAutoHideOnScroll } from './hooks/useAutoHideOnScroll';
 import { useDraftState } from './hooks/useDraftState';
 import type { Plan } from './lib/plans';
 import { ownsHome } from './lib/questions';
+import { QUESTIONNAIRE_SECTIONS, RETIREMENT_QUESTIONNAIRE_SECTIONS } from './lib/questionnaire';
 import { DEFAULT_BASE_RANGES } from './lib/baseData';
 import { INSPECT_YEAR_FIELD } from './lib/baseFields';
 import { runModel, type IncomeStreamInputs } from './lib/model';
 import { chartToggleOptions, primarySeriesFor, type ChartSeriesId } from './lib/chartSeries';
 import { formatCurrency, formatCurrencyCompact } from './lib/format';
 
-type PageTab = 'primary' | 'mortgage' | 'retirement';
+type PageTab = 'plan' | 'mortgage' | 'retirement';
 type MobileTab = 'inputs' | 'goals' | 'results';
 
 function tabClassName(tab: PageTab, activeTab: PageTab): string {
@@ -36,9 +38,16 @@ function tabClassName(tab: PageTab, activeTab: PageTab): string {
 function App() {
   const draft = useDraftState();
   const [selectedSeriesId, setSelectedSeriesId] = useState<ChartSeriesId | null>(null);
-  const [activeTab, setActiveTab] = useState<PageTab>('primary');
+  const [activeTab, setActiveTab] = useState<PageTab>('plan');
   const [mobileTab, setMobileTab] = useState<MobileTab>('inputs');
   const headerHidden = useAutoHideOnScroll();
+  // Initial value only - not kept in sync with draft.onboardingComplete after mount, so a later
+  // "review my answers" affordance (Story 8) or "+ new plan" (Story 9) can reopen this even once
+  // onboardingComplete is already true, without it snapping back shut on the next render.
+  const [questionnaireOpen, setQuestionnaireOpen] = useState(() => !draft.onboardingComplete);
+  // 'question' for a mid-plan review (Story 8) - skips the welcome screen's first-time marketing
+  // copy since every field is already prefilled from the existing draft, not a fresh plan.
+  const [questionnaireInitialScreen, setQuestionnaireInitialScreen] = useState<'welcome' | 'question'>('welcome');
 
   /** Which saved plan (if any) the current draft was loaded from/saved as, plus a snapshot of its
    *  content at that moment - together these drive the "which plan, and is it modified" indicator
@@ -69,6 +78,14 @@ function App() {
     draft.loadPlan(plan);
     setActivePlanName(null);
     setSavedSnapshot(null);
+  };
+
+  const handlePlanCreated = (name: string, plan: Plan) => {
+    draft.loadPlan(plan);
+    setActivePlanName(name);
+    setSavedSnapshot(JSON.stringify(plan));
+    setQuestionnaireInitialScreen('welcome');
+    setQuestionnaireOpen(true);
   };
 
   const primaryIncomeControls: SalaryRaiseBreakpointsProps = {
@@ -173,7 +190,27 @@ function App() {
   ];
 
   let activeTabContent: ReactNode;
-  if (activeTab === 'primary') {
+  if (questionnaireOpen) {
+    activeTabContent = (
+      <OnboardingFlow
+        sections={QUESTIONNAIRE_SECTIONS}
+        answers={draft.answers}
+        onAnswer={draft.setAnswer}
+        baseInputs={draft.baseInputs}
+        ranges={DEFAULT_BASE_RANGES}
+        onChange={draft.setBaseInput}
+        salaryRaiseControls={primaryIncomeControls}
+        partnerSalaryRaiseControls={partnerIncomeControls}
+        childrenControls={childrenControls}
+        initialScreen={questionnaireInitialScreen}
+        onFinish={() => {
+          draft.completeOnboarding();
+          setQuestionnaireOpen(false);
+          setActiveTab('plan');
+        }}
+      />
+    );
+  } else if (activeTab === 'plan') {
     activeTabContent = (
       <div className="app-shell" data-mobile-tab={mobileTab}>
         <aside className="app-shell__sidebar">
@@ -243,6 +280,25 @@ function App() {
     activeTabContent = (
       <MortgagePage baseInputs={draft.baseInputs} ranges={DEFAULT_BASE_RANGES} onChange={draft.setBaseInput} answers={draft.answers} />
     );
+  } else if (!draft.retirementOnboardingComplete) {
+    // First visit to the Retirement tab for this plan - walk its own short questionnaire before
+    // showing the full sidebar, same "answer once, see the plan" idea as the primary questionnaire
+    // but scoped to just the retirement fields (see lib/questionnaire.ts).
+    activeTabContent = (
+      <OnboardingFlow
+        sections={RETIREMENT_QUESTIONNAIRE_SECTIONS}
+        answers={draft.answers}
+        onAnswer={draft.setAnswer}
+        baseInputs={draft.baseInputs}
+        ranges={DEFAULT_BASE_RANGES}
+        onChange={draft.setBaseInput}
+        salaryRaiseControls={primaryIncomeControls}
+        partnerSalaryRaiseControls={partnerIncomeControls}
+        childrenControls={childrenControls}
+        initialScreen="question"
+        onFinish={() => draft.completeRetirementOnboarding()}
+      />
+    );
   } else {
     activeTabContent = (
       <RetirementPage
@@ -260,8 +316,8 @@ function App() {
       <div className={headerHidden ? 'page__header page__header--hidden' : 'page__header'}>
         <img src="https://ajpye-gh.github.io/pyenancial/og-image.svg" alt="Pyenancial" className="page__logo" />
         <nav className="page-tabs">
-          <div className={tabClassName('primary', activeTab)} onClick={() => setActiveTab('primary')}>
-            Home
+          <div className={tabClassName('plan', activeTab)} onClick={() => setActiveTab('plan')}>
+            Plan
           </div>
           <div className={tabClassName('mortgage', activeTab)} onClick={() => setActiveTab('mortgage')}>
             Mortgage
@@ -280,6 +336,7 @@ function App() {
             onPlanLoaded={handlePlanLoaded}
             onPlanSaved={handlePlanSaved}
             onPlanDeleted={handlePlanDeleted}
+            onPlanCreated={handlePlanCreated}
             onImportPlan={handleImportPlan}
             planForSaving={draft.planForSaving}
             onUndo={draft.undo}
@@ -288,7 +345,12 @@ function App() {
             canRedo={draft.canRedo}
             isAutosaving={draft.isAutosaving}
           />
-          <SettingsMenu />
+          <SettingsMenu
+            onReviewAnswers={() => {
+              setQuestionnaireInitialScreen('question');
+              setQuestionnaireOpen(true);
+            }}
+          />
         </div>
       </div>
 

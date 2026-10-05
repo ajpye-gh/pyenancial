@@ -8,37 +8,17 @@ import { Row } from '../results/BreakdownTable';
 import { MortgageChart } from './MortgageChart';
 import type { BaseInputs, BaseRanges } from '../../lib/baseData';
 import {
-  HOME_INSURANCE_FIELD,
-  HOME_VALUE_FIELD,
+  EXTRA_PAYMENTS_GROUP,
   INFLATION_FIELD,
-  MORTGAGE_BALANCE_FIELD,
-  MORTGAGE_EXTRA_PRINCIPAL_FIELD,
+  MORTGAGE_DETAILS_GROUP,
   MORTGAGE_INSPECT_YEAR_FIELD,
-  MORTGAGE_INSURANCE_FIELD,
-  MORTGAGE_RATE_FIELD,
-  MORTGAGE_TERM_FIELD,
-  PROPERTY_TAX_FIELD,
+  TAXES_INSURANCE_GROUP,
   type BaseFieldGroup,
   type BaseFieldId,
 } from '../../lib/baseFields';
 import { formatCurrency, formatCurrencyCompact } from '../../lib/format';
 import { ownsHome as getOwnsHome, type Answers } from '../../lib/questions';
 import { buildAmortizationSchedule, currentMonthlyPayment, formatPayoffDate } from '../../lib/mortgage';
-
-const MORTGAGE_DETAILS_GROUP: BaseFieldGroup = {
-  title: 'Mortgage',
-  fields: [HOME_VALUE_FIELD, MORTGAGE_BALANCE_FIELD, MORTGAGE_RATE_FIELD, MORTGAGE_TERM_FIELD],
-};
-
-const TAXES_INSURANCE_GROUP: BaseFieldGroup = {
-  title: 'Taxes & insurance',
-  fields: [PROPERTY_TAX_FIELD, HOME_INSURANCE_FIELD, MORTGAGE_INSURANCE_FIELD],
-};
-
-const EXTRA_PAYMENTS_GROUP: BaseFieldGroup = {
-  title: 'Extra payments',
-  fields: [MORTGAGE_EXTRA_PRINCIPAL_FIELD],
-};
 
 // Same "Assumptions" home-appreciation assumption the rest of the model uses (see model.ts's
 // projectHomeEquity) - only Inflation is relevant here (it drives home-value appreciation and the
@@ -163,8 +143,8 @@ export function MortgagePage({ baseInputs, ranges, onChange, answers }: Readonly
       <div className="app-shell">
         <div className="app-shell__main">
           <p className="mortgage-page__empty">
-            You've told the Home tab you rent, not own — the mortgage calculator applies once you own a home. Switch
-            the housing toggle on the Home tab to see it here.
+            You've told the Plan tab you rent, not own — the mortgage calculator applies once you own a home. Switch
+            the housing toggle on the Plan tab to see it here.
           </p>
         </div>
       </div>

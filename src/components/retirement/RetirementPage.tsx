@@ -13,25 +13,13 @@ import { RetirementChart } from './RetirementChart';
 import type { BaseInputs, BaseRanges } from '../../lib/baseData';
 import {
   BASE_FIELD_GROUPS,
-  RETIREMENT_AFTER_TAX_CONTRIBUTION_FIELD,
-  RETIREMENT_AFTER_TAX_GAIN_FIELD,
-  RETIREMENT_AFTER_TAX_SAVINGS_FIELD,
-  RETIREMENT_AFTER_TAX_WITHDRAWAL_FIELD,
-  RETIREMENT_CURRENT_AGE_FIELD,
+  RETIREMENT_AFTER_TAX_GROUP as AFTER_TAX_GROUP,
+  RETIREMENT_AGE_GROUP as AGE_GROUP,
+  RETIREMENT_INCOME_GROUP as INCOME_GROUP,
   RETIREMENT_INSPECT_AGE_FIELD,
-  RETIREMENT_PENSION_FIELD,
-  RETIREMENT_PENSION_START_AGE_FIELD,
-  RETIREMENT_ROTH_CONTRIBUTION_FIELD,
-  RETIREMENT_ROTH_SAVINGS_FIELD,
-  RETIREMENT_ROTH_WITHDRAWAL_FIELD,
-  RETIREMENT_SOCIAL_SECURITY_FIELD,
-  RETIREMENT_SOCIAL_SECURITY_START_AGE_FIELD,
-  RETIREMENT_TARGET_AGE_FIELD,
-  RETIREMENT_TRADITIONAL_CONTRIBUTION_FIELD,
-  RETIREMENT_TRADITIONAL_SAVINGS_FIELD,
-  RETIREMENT_TRADITIONAL_WITHDRAWAL_FIELD,
+  RETIREMENT_ROTH_GROUP as ROTH_GROUP,
+  RETIREMENT_TRADITIONAL_GROUP as TRADITIONAL_GROUP,
   type BaseFieldId,
-  type BaseFieldGroup,
 } from '../../lib/baseFields';
 import { formatCurrency, formatCurrencyCompact, formatSliderValue } from '../../lib/format';
 import { filingStatus as getFilingStatus, socialSecurityEnabled, ssWithdrawalBridgeEnabled, type Answers } from '../../lib/questions';
@@ -45,31 +33,6 @@ import {
   projectRetirementBalance,
   type NamedRetirementPot,
 } from '../../lib/retirement';
-
-const AGE_GROUP: BaseFieldGroup = {
-  title: 'Age',
-  fields: [RETIREMENT_CURRENT_AGE_FIELD, RETIREMENT_TARGET_AGE_FIELD],
-};
-
-const ROTH_GROUP: BaseFieldGroup = {
-  title: 'Roth',
-  fields: [RETIREMENT_ROTH_SAVINGS_FIELD, RETIREMENT_ROTH_CONTRIBUTION_FIELD, RETIREMENT_ROTH_WITHDRAWAL_FIELD],
-};
-
-const TRADITIONAL_GROUP: BaseFieldGroup = {
-  title: 'Traditional',
-  fields: [RETIREMENT_TRADITIONAL_SAVINGS_FIELD, RETIREMENT_TRADITIONAL_CONTRIBUTION_FIELD, RETIREMENT_TRADITIONAL_WITHDRAWAL_FIELD],
-};
-
-const AFTER_TAX_GROUP: BaseFieldGroup = {
-  title: 'After-tax',
-  fields: [
-    RETIREMENT_AFTER_TAX_SAVINGS_FIELD,
-    RETIREMENT_AFTER_TAX_CONTRIBUTION_FIELD,
-    RETIREMENT_AFTER_TAX_WITHDRAWAL_FIELD,
-    RETIREMENT_AFTER_TAX_GAIN_FIELD,
-  ],
-};
 
 // Dollar amount is the primary, directly-editable slider value (see RETIREMENT_*_WITHDRAWAL_FIELD in
 // baseFields.ts); the equivalent "4% rule"-style initial withdrawal rate is derived from it and
@@ -86,11 +49,6 @@ function withdrawalValueLabel(monthlyDollar: number, ratePct: number): string {
 function impliedWithdrawalRatePct(monthlyDollar: number, balanceAtRetirement: number): number {
   return balanceAtRetirement > 0 ? ((monthlyDollar * 12) / balanceAtRetirement) * 100 : 0;
 }
-
-const INCOME_GROUP: BaseFieldGroup = {
-  title: 'Income in retirement',
-  fields: [RETIREMENT_SOCIAL_SECURITY_FIELD, RETIREMENT_SOCIAL_SECURITY_START_AGE_FIELD, RETIREMENT_PENSION_FIELD, RETIREMENT_PENSION_START_AGE_FIELD],
-};
 
 // Same "Assumptions" group (inflation, investment return) the primary page's sidebar renders -
 // shown here too so it's editable in place, not just silently used by the projection. It's the
