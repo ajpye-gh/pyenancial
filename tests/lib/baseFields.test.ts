@@ -1,6 +1,9 @@
 import { DEFAULT_BASE_RANGES } from '@src/lib/baseData';
 import {
   ALL_BASE_FIELD_IDS,
+  DEBT_EXTRA_PAYMENT_FIELD,
+  DEBT_INSPECT_YEAR_FIELD,
+  DEBT_PAYOFF_GROUP,
   INSPECT_YEAR_FIELD,
   RETIREMENT_ROTH_CONTRIBUTION_FIELD,
   RETIREMENT_ROTH_SAVINGS_FIELD,
@@ -123,5 +126,17 @@ describe('visibleBaseFieldGroups', () => {
   it('renders cashGrowthPct in the Assumptions group, right next to inflationPct', () => {
     const assumptionsIds = fieldIdsIn('Assumptions', visibleBaseFieldGroups({}));
     expect(assumptionsIds).toEqual(['inflationPct', 'cashGrowthPct', 'investmentReturnPct']);
+  });
+
+  it('does not render the debt-payoff fields in any primary-page sidebar group - they belong to the Debt page instead', () => {
+    const fieldIds = visibleBaseFieldGroups({}).flatMap((group) => group.fields.map((field) => field.id));
+    expect(fieldIds).not.toContain('debtExtraPaymentMo');
+    expect(fieldIds).not.toContain('debtInspectYear');
+    expect(ALL_BASE_FIELD_IDS).toEqual(expect.arrayContaining([DEBT_EXTRA_PAYMENT_FIELD.id, DEBT_INSPECT_YEAR_FIELD.id]));
+  });
+
+  it('keeps DEBT_PAYOFF_GROUP out of BASE_FIELD_GROUPS entirely - it is only rendered on the Debt page sidebar', () => {
+    expect(visibleBaseFieldGroups({}).map((group) => group.title)).not.toContain(DEBT_PAYOFF_GROUP.title);
+    expect(DEBT_PAYOFF_GROUP.fields).toEqual([DEBT_EXTRA_PAYMENT_FIELD]);
   });
 });

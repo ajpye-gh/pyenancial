@@ -45,7 +45,9 @@ export type BaseFieldId =
   | 'retirementPensionStartAge'
   | 'retirementCurrentAge'
   | 'retirementTargetAge'
-  | 'retirementInspectAge';
+  | 'retirementInspectAge'
+  | 'debtExtraPaymentMo'
+  | 'debtInspectYear';
 
 export interface BaseFieldMeta {
   id: BaseFieldId;
@@ -504,6 +506,34 @@ export const RETIREMENT_INCOME_GROUP: BaseFieldGroup = {
   fields: [RETIREMENT_SOCIAL_SECURITY_FIELD, RETIREMENT_SOCIAL_SECURITY_START_AGE_FIELD, RETIREMENT_PENSION_FIELD, RETIREMENT_PENSION_START_AGE_FIELD],
 };
 
+/** Rendered on the Debt page's own sidebar, not the primary page's ControlsPanel - same reasoning
+ *  as the Mortgage/Retirement page-local fields above. */
+export const DEBT_EXTRA_PAYMENT_FIELD: BaseFieldMeta = {
+  id: 'debtExtraPaymentMo',
+  label: 'Extra toward debt /mo',
+  format: '$',
+  tooltip:
+    "Additional amount, beyond everyone's minimum payments, put toward debt payoff each month - goes to whichever debt your chosen strategy (snowball/avalanche) prioritizes first, same as how extra payments speed up the Mortgage tab's own schedule.",
+};
+
+/** Rendered next to the payoff detail below the Debt page's chart, same "which year's numbers am
+ *  I looking at" role as INSPECT_YEAR_FIELD/MORTGAGE_INSPECT_YEAR_FIELD/RETIREMENT_INSPECT_AGE_FIELD
+ *  above. */
+export const DEBT_INSPECT_YEAR_FIELD: BaseFieldMeta = {
+  id: 'debtInspectYear',
+  label: 'Inspect year',
+  format: 'yr',
+  tooltip: 'Which year the payoff detail below shows.',
+};
+
+/** The Debt page's own field group - not added to BASE_FIELD_GROUPS, so it never appears on the
+ *  Plan tab's sidebar or in the primary questionnaire, same treatment as MORTGAGE_DETAILS_GROUP/
+ *  EXTRA_PAYMENTS_GROUP above. */
+export const DEBT_PAYOFF_GROUP: BaseFieldGroup = {
+  title: 'Debt payoff',
+  fields: [DEBT_EXTRA_PAYMENT_FIELD],
+};
+
 export const ALL_BASE_FIELD_IDS: BaseFieldId[] = [
   ...BASE_FIELD_GROUPS.flatMap((group) => group.fields.map((field) => field.id)),
   INSPECT_YEAR_FIELD.id,
@@ -531,6 +561,8 @@ export const ALL_BASE_FIELD_IDS: BaseFieldId[] = [
   RETIREMENT_CURRENT_AGE_FIELD.id,
   RETIREMENT_TARGET_AGE_FIELD.id,
   RETIREMENT_INSPECT_AGE_FIELD.id,
+  DEBT_EXTRA_PAYMENT_FIELD.id,
+  DEBT_INSPECT_YEAR_FIELD.id,
 ];
 
 /** Groups filtered down to their currently-visible fields; groups left with no visible fields are dropped entirely. */

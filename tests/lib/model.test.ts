@@ -8,8 +8,11 @@ import {
 } from '@src/lib/model';
 import type { BaseInputs } from '@src/lib/baseData';
 import type { Child } from '@src/lib/children';
+import type { Debt } from '@src/lib/debts';
 import type { RecurringGoal } from '@src/lib/goals';
 import type { SalaryRaiseBreakpoint } from '@src/lib/salaryRaises';
+
+const NO_DEBT_PAYOFF: ModelInputs['debtPayoff'] = { debts: [], strategy: 'avalanche', extraMonthlyBudget: 0 };
 
 // P&I is now computed from balance/rate/term (see monthlyMortgagePayment) instead of being a
 // manually-entered fixture field. Solving for the balance that reproduces exactly the same $1200/mo
@@ -91,6 +94,7 @@ function run(overrides: Partial<ModelInputs>) {
     children: NO_CHILDREN,
     primaryIncome: PRIMARY_INCOME,
     partnerIncome: NO_PARTNER_INCOME,
+    debtPayoff: NO_DEBT_PAYOFF,
     ...overrides,
   });
 }
@@ -772,6 +776,55 @@ describe('runModel', () => {
 
       // $20k bonus * 60% keep rate / 12mo = $1000/mo.
       expect(withBonus.chart.freeCash[5] - noBonus.chart.freeCash[5]).toBeCloseTo(1000, 6);
+    });
+  });
+
+  describe('debt payoff cash flow (ModelInputs.debtPayoff)', () => {
+    // $10k @ 20% APR, $300/mo minimum, no extra budget - pays off a bit before year 5 (verified via
+    // debtPayoff.test.ts's own schedule tests), so year 2 is comfortably mid-payoff and year 10 is
+    // comfortably after.
+    const ONE_DEBT: Debt[] = [{ id: 'd1', name: 'Card', balance: 10000, aprPct: 20, minPayment: 300 }];
+
+    it('reduces free cash and unallocated savings relative to no debt at all', () => {
+      const withDebt = run({
+        goals: [],
+        debtPayoff: { debts: ONE_DEBT, strategy: 'avalanche', extraMonthlyBudget: 0 },
+        base: { ...BASE, inspectYear: 2 },
+      });
+      const withoutDebt = run({ goals: [], base: { ...BASE, inspectYear: 2 } });
+
+      expect(withDebt.snapshot.debtCost).toBeGreaterThan(0);
+      expect(withDebt.freeCashAtInspect).toBeLessThan(withoutDebt.freeCashAtInspect);
+      // The early-year reduction compounds forward even though the debt itself is paid off well
+      // before year 18 (see the next test) - less free cash in years 1-4 means less ever got
+      // invested, so the gap persists through the end of the horizon.
+      expect(withDebt.unallocatedAtEnd).toBeLessThan(withoutDebt.unallocatedAtEnd);
+    });
+
+    it('drops debt payments (and their drag on free cash) to $0 once the schedule itself reports payoff', () => {
+      const midPayoff = run({
+        goals: [],
+        debtPayoff: { debts: ONE_DEBT, strategy: 'avalanche', extraMonthlyBudget: 0 },
+        base: { ...BASE, inspectYear: 2 },
+      });
+      const afterPayoff = run({
+        goals: [],
+        debtPayoff: { debts: ONE_DEBT, strategy: 'avalanche', extraMonthlyBudget: 0 },
+        base: { ...BASE, inspectYear: 10 },
+      });
+
+      expect(midPayoff.snapshot.debtCost).toBeGreaterThan(0);
+      expect(afterPayoff.snapshot.debtCost).toBe(0);
+    });
+
+    it('an empty debts array behaves identically to debtPayoff being absent from everyday use (no cost, no drag)', () => {
+      const result = run({
+        goals: [],
+        debtPayoff: { debts: [], strategy: 'avalanche', extraMonthlyBudget: 0 },
+        base: { ...BASE, inspectYear: 5 },
+      });
+
+      expect(result.snapshot.debtCost).toBe(0);
     });
   });
 });

@@ -61,7 +61,7 @@ function Harness({
   );
 }
 
-/** Walks Start -> Getting started (Rent/No/No) -> Income -> Expenses -> Other assets ->
+/** Walks Start -> Getting started (Rent/No/No/No) -> Income -> Expenses -> Other assets ->
  *  Assumptions, skipping every repeatable "add another" step, landing on the Assumptions summary
  *  (the last section of the primary questionnaire - retirement isn't part of it, see
  *  RETIREMENT_QUESTIONNAIRE_SECTIONS for that flow's own tests). Renting (rather than owning)
@@ -71,6 +71,7 @@ async function walkToAssumptionsSummary(user: UserEvent) {
   await user.click(screen.getByRole('button', { name: 'Rent' }));
   await user.click(screen.getByRole('button', { name: 'No' })); // hasPartnerIncome
   await user.click(screen.getByRole('button', { name: 'No' })); // hasKids
+  await user.click(screen.getByRole('button', { name: 'No' })); // hasDebt
   await user.click(screen.getByRole('button', { name: 'Continue' })); // Getting started -> Income
 
   await user.click(screen.getByRole('button', { name: 'Next' })); // salaryY0K -> salary milestones
@@ -132,6 +133,7 @@ describe('OnboardingFlow', () => {
     await user.click(screen.getByRole('button', { name: 'Own' }));
     await user.click(screen.getByRole('button', { name: 'No' })); // hasPartnerIncome
     await user.click(screen.getByRole('button', { name: 'No' })); // hasKids
+    await user.click(screen.getByRole('button', { name: 'No' })); // hasDebt
 
     expect(screen.getByRole('heading', { name: /getting started - your answers/i })).toBeInTheDocument();
     expect(screen.getByText('Own')).toBeInTheDocument();
@@ -151,6 +153,7 @@ describe('OnboardingFlow', () => {
     render(<Harness onFinish={jest.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Start' }));
     await user.click(screen.getByRole('button', { name: 'Own' }));
+    await user.click(screen.getByRole('button', { name: 'No' }));
     await user.click(screen.getByRole('button', { name: 'No' }));
     await user.click(screen.getByRole('button', { name: 'No' }));
     await user.click(screen.getByRole('button', { name: 'Continue' })); // Getting started -> Income
@@ -179,6 +182,7 @@ describe('OnboardingFlow', () => {
     await user.click(screen.getByRole('button', { name: 'Own' }));
     await user.click(screen.getByRole('button', { name: 'No' })); // hasPartnerIncome
     await user.click(screen.getByRole('button', { name: 'No' })); // hasKids
+    await user.click(screen.getByRole('button', { name: 'No' })); // hasDebt
     await user.click(screen.getByRole('button', { name: 'Continue' })); // -> Income
     await user.click(screen.getByRole('button', { name: 'Next' })); // salaryY0K -> salary milestones
     await user.click(screen.getByRole('button', { name: 'Done - continue' }));
@@ -214,6 +218,7 @@ describe('OnboardingFlow', () => {
     render(<Harness onFinish={jest.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Start' }));
     await user.click(screen.getByRole('button', { name: 'Own' }));
+    await user.click(screen.getByRole('button', { name: 'No' }));
     await user.click(screen.getByRole('button', { name: 'No' }));
     await user.click(screen.getByRole('button', { name: 'No' }));
     await user.click(screen.getByRole('button', { name: 'Continue' })); // -> Income

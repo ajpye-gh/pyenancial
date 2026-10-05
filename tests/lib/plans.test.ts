@@ -11,6 +11,7 @@ describe('freshPlan', () => {
     expect(isValidPlan(plan)).toBe(true);
     expect(plan.goals).toEqual([]);
     expect(plan.children).toEqual([]);
+    expect(plan.debts).toEqual([]);
     expect(plan.answers).toEqual({ housing: 'own' });
   });
 });
@@ -53,6 +54,15 @@ describe('isValidPlan', () => {
 
   it('accepts an undefined jobLossYear/partnerJobLossYear (no job loss set)', () => {
     expect(isValidPlan({ ...valid, jobLossYear: undefined, partnerJobLossYear: undefined })).toBe(true);
+  });
+
+  it('accepts a plan with debts omitted entirely (predates the Debt tab)', () => {
+    const { debts: _debts, ...legacy } = valid;
+    expect(isValidPlan(legacy)).toBe(true);
+  });
+
+  it('rejects a plan with an invalid debt in the array', () => {
+    expect(isValidPlan({ ...valid, debts: [{ id: 'd1', name: '', balance: -1, aprPct: 20, minPayment: 50 }] })).toBe(false);
   });
 
   it('accepts a property goal predating the isFirstPurchase field - older saved plans still load', () => {
@@ -152,5 +162,14 @@ describe('saved plan registry (listSavedPlans / savePlan / loadSavedPlan)', () =
     expect(loaded?.baseInputs.partnerAnnualBonusK).toBe(DEFAULT_BASE_RANGES.partnerAnnualBonusK.default);
     // Every other field is untouched.
     expect(loaded?.baseInputs.salaryY0K).toBe(plan.baseInputs.salaryY0K);
+  });
+
+  it('backfills debts: [] for a saved plan that predates the Debt tab', () => {
+    const plan = freshPlan();
+    const { debts: _debts, ...legacyPlan } = plan;
+    localStorage.setItem('pyenancial:plans', JSON.stringify({ Legacy: legacyPlan }));
+
+    const loaded = loadSavedPlan('Legacy');
+    expect(loaded?.debts).toEqual([]);
   });
 });
