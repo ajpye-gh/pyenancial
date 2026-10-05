@@ -4,6 +4,7 @@ import { ControlsPanel } from './components/controls/ControlsPanel';
 import type { SalaryRaiseBreakpointsProps } from './components/controls/SalaryRaiseBreakpoints';
 import { SliderField } from './components/controls/SliderField';
 import { GoalsPanel } from './components/goals/GoalsPanel';
+import { DebtPage } from './components/debt/DebtPage';
 import { MobileSubTabs } from './components/MobileSubTabs';
 import { MortgagePage } from './components/mortgage/MortgagePage';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
@@ -19,7 +20,7 @@ import { BreakdownTable } from './components/results/BreakdownTable';
 import { useAutoHideOnScroll } from './hooks/useAutoHideOnScroll';
 import { useDraftState } from './hooks/useDraftState';
 import type { Plan } from './lib/plans';
-import { ownsHome } from './lib/questions';
+import { debtPayoffStrategy, hasDebt, ownsHome } from './lib/questions';
 import { QUESTIONNAIRE_SECTIONS, RETIREMENT_QUESTIONNAIRE_SECTIONS } from './lib/questionnaire';
 import { DEFAULT_BASE_RANGES } from './lib/baseData';
 import { INSPECT_YEAR_FIELD } from './lib/baseFields';
@@ -27,7 +28,7 @@ import { runModel, type IncomeStreamInputs } from './lib/model';
 import { chartToggleOptions, primarySeriesFor, type ChartSeriesId } from './lib/chartSeries';
 import { formatCurrency, formatCurrencyCompact } from './lib/format';
 
-type PageTab = 'plan' | 'mortgage' | 'retirement';
+type PageTab = 'plan' | 'mortgage' | 'retirement' | 'debt';
 type MobileTab = 'inputs' | 'goals' | 'results';
 
 function tabClassName(tab: PageTab, activeTab: PageTab): string {
@@ -139,6 +140,11 @@ function App() {
       children: draft.children,
       primaryIncome,
       partnerIncome,
+      debtPayoff: {
+        debts: hasDebt(draft.answers) ? draft.debts : [],
+        strategy: debtPayoffStrategy(draft.answers),
+        extraMonthlyBudget: draft.baseInputs.debtExtraPaymentMo,
+      },
     });
   }, [
     draft.baseInputs,
@@ -149,6 +155,7 @@ function App() {
     draft.jobLossYear,
     draft.partnerSalaryRaises,
     draft.partnerJobLossYear,
+    draft.debts,
   ]);
 
   const toggleOptions = chartToggleOptions(draft.goals);
@@ -280,6 +287,20 @@ function App() {
     activeTabContent = (
       <MortgagePage baseInputs={draft.baseInputs} ranges={DEFAULT_BASE_RANGES} onChange={draft.setBaseInput} answers={draft.answers} />
     );
+  } else if (activeTab === 'debt') {
+    activeTabContent = (
+      <DebtPage
+        debts={draft.debts}
+        onAddDebt={draft.addDebt}
+        onRemoveDebt={draft.removeDebt}
+        onUpdateDebt={draft.updateDebt}
+        baseInputs={draft.baseInputs}
+        ranges={DEFAULT_BASE_RANGES}
+        onChange={draft.setBaseInput}
+        answers={draft.answers}
+        onAnswer={draft.setAnswer}
+      />
+    );
   } else if (!draft.retirementOnboardingComplete) {
     // First visit to the Retirement tab for this plan - walk its own short questionnaire before
     // showing the full sidebar, same "answer once, see the plan" idea as the primary questionnaire
@@ -324,6 +345,9 @@ function App() {
           </div>
           <div className={tabClassName('retirement', activeTab)} onClick={() => setActiveTab('retirement')}>
             Retirement
+          </div>
+          <div className={tabClassName('debt', activeTab)} onClick={() => setActiveTab('debt')}>
+            Debt
           </div>
         </nav>
         <div className="page__header-controls">

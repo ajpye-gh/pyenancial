@@ -1,4 +1,13 @@
-import { filingStatus, hasKids, hasPartnerIncome, ownsHome, socialSecurityEnabled, ssWithdrawalBridgeEnabled } from '@src/lib/questions';
+import {
+  debtPayoffStrategy,
+  filingStatus,
+  hasDebt,
+  hasKids,
+  hasPartnerIncome,
+  ownsHome,
+  socialSecurityEnabled,
+  ssWithdrawalBridgeEnabled,
+} from '@src/lib/questions';
 
 describe('ownsHome', () => {
   it('is true only when housing is answered "own"', () => {
@@ -53,6 +62,28 @@ describe('hasKids', () => {
   it('is true only when explicitly answered true', () => {
     expect(hasKids({ hasKids: true })).toBe(true);
     expect(hasKids({ hasKids: false })).toBe(false);
+  });
+});
+
+describe('hasDebt', () => {
+  it('defaults to false when unset', () => {
+    expect(hasDebt({})).toBe(false);
+  });
+
+  it('is true only when explicitly answered true', () => {
+    expect(hasDebt({ hasDebt: true })).toBe(true);
+    expect(hasDebt({ hasDebt: false })).toBe(false);
+  });
+});
+
+describe('debtPayoffStrategy', () => {
+  it('defaults to avalanche when unset or answered anything else', () => {
+    expect(debtPayoffStrategy({})).toBe('avalanche');
+    expect(debtPayoffStrategy({ debtPayoffStrategy: 'nonsense' })).toBe('avalanche');
+  });
+
+  it('is snowball only when explicitly answered that way', () => {
+    expect(debtPayoffStrategy({ debtPayoffStrategy: 'snowball' })).toBe('snowball');
   });
 });
 

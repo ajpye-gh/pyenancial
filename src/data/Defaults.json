@@ -41,5 +41,7 @@
   "retirementPensionStartAge": { "min": 18, "max": 100, "step": 1, "default": 65 },
   "retirementCurrentAge": { "min": 18, "max": 100, "step": 1, "default": 35 },
   "retirementTargetAge": { "min": 18, "max": 100, "step": 1, "default": 65 },
-  "retirementInspectAge": { "min": 18, "max": 100, "step": 1, "default": 66 }
+  "retirementInspectAge": { "min": 18, "max": 100, "step": 1, "default": 66 },
+  "debtExtraPaymentMo": { "min": 0, "max": 2000, "step": 25, "default": 0 },
+  "debtInspectYear": { "min": 0, "max": 30, "step": 1, "default": 0 }
 }

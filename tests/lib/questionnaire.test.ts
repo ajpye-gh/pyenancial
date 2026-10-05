@@ -30,6 +30,12 @@ describe('visibleSections', () => {
     expect(ids).toEqual(['retirement-age', 'retirement-roth', 'retirement-traditional', 'retirement-after-tax', 'retirement-income']);
   });
 
+  it('includes the hasDebt gating question in the Getting started section, regardless of answers', () => {
+    const sections = visibleSections(QUESTIONNAIRE_SECTIONS, {});
+    const gettingStarted = sections.find((section) => section.id === 'getting-started');
+    expect(gettingStarted?.questions.some((question) => question.kind === 'answer' && question.id === 'hasDebt')).toBe(true);
+  });
+
   it('drops a section entirely if every one of its questions gets filtered out', () => {
     const sections = visibleSections(
       [

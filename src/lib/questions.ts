@@ -1,3 +1,4 @@
+import type { DebtPayoffStrategy } from './debtPayoff';
 import type { FilingStatus } from './tax';
 
 export type Answers = Record<string, boolean | string>;
@@ -42,4 +43,20 @@ export function socialSecurityEnabled(answers: Answers): boolean {
  *  retiring before Social Security starts; see RetirementPage.tsx's own gating. */
 export function ssWithdrawalBridgeEnabled(answers: Answers): boolean {
   return answers.ssWithdrawalBridgeEnabled === true;
+}
+
+/** Defaults to false (no debt to track) when unset. Unlike hasPartnerIncome/hasKids above, this
+ *  also gates the Debt tab's own persistent toggle (see DebtToggle.tsx) - not just the
+ *  questionnaire's section skipping - since whether someone has debt can change over time (same
+ *  reasoning HousingToggle's own comment gives for why ownsHome is a real control, not just a
+ *  one-time answer). */
+export function hasDebt(answers: Answers): boolean {
+  return answers.hasDebt === true;
+}
+
+/** Defaults to 'avalanche' (highest rate first - minimizes total interest) when unset, consistent
+ *  with this app's "high interest debt" framing. 'snowball' (smallest balance first) only applies
+ *  once explicitly chosen. */
+export function debtPayoffStrategy(answers: Answers): DebtPayoffStrategy {
+  return answers.debtPayoffStrategy === 'snowball' ? 'snowball' : 'avalanche';
 }
