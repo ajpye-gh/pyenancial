@@ -1323,6 +1323,21 @@ input.slider-field__value-input {
   margin-bottom: 6px;
 }
 
+.debt-control__readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.debt-control__readout-value {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 .add-goal-card {
   display: flex;
   flex-direction: column;

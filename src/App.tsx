@@ -243,6 +243,7 @@ function App() {
             primaryIncomeControls={primaryIncomeControls}
             partnerIncomeControls={partnerIncomeControls}
             childrenControls={childrenControls}
+            debts={draft.debts}
           />
         </aside>
 

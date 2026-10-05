@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { ChildBreakpoints, type ChildBreakpointsProps } from './ChildBreakpoints';
 import { ControlGroup } from './ControlGroup';
+import { DebtControl } from './DebtControl';
 import { HousingToggle } from './HousingToggle';
 import { SalaryRaiseBreakpoints, type SalaryRaiseBreakpointsProps } from './SalaryRaiseBreakpoints';
 import { visibleBaseFieldGroups, type BaseFieldId } from '../../lib/baseFields';
+import type { Debt } from '../../lib/debts';
 import { formatCurrency, formatSliderValue } from '../../lib/format';
 import { ownsHome, type Answers } from '../../lib/questions';
 import type { BaseInputs, BaseRanges } from '../../lib/baseData';
@@ -24,6 +26,7 @@ interface ControlsPanelProps {
   primaryIncomeControls: SalaryRaiseBreakpointsProps;
   partnerIncomeControls: SalaryRaiseBreakpointsProps;
   childrenControls: ChildBreakpointsProps;
+  debts: Debt[];
 }
 
 export function ControlsPanel({
@@ -35,6 +38,7 @@ export function ControlsPanel({
   primaryIncomeControls,
   partnerIncomeControls,
   childrenControls,
+  debts,
 }: Readonly<ControlsPanelProps>) {
   const incomeGroups: IncomeGroupConfig[] = [
     { title: 'Income', salaryFieldId: 'salaryY0K', keepRateFieldId: 'netKeepRatePct', controls: primaryIncomeControls },
@@ -89,6 +93,7 @@ export function ControlsPanel({
           />
         );
       })}
+      <DebtControl answers={answers} onAnswer={onAnswer} debts={debts} ranges={ranges} values={values} onChange={onChange} />
     </div>
   );
 }
