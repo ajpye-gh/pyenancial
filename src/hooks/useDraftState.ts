@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTravel } from 'use-travel';
 import type { Answers } from '../lib/questions';
 import type { BaseInputs } from '../lib/baseData';
@@ -58,6 +58,7 @@ function loadDraft(): Plan {
     // already-set-up rather than forcing an existing user back through the questionnaire. A
     // genuinely fresh draft never reaches this branch (no `raw` at all - see the early return above).
     const onboardingComplete = typeof record.onboardingComplete === 'boolean' ? record.onboardingComplete : true;
+    const retirementOnboardingComplete = typeof record.retirementOnboardingComplete === 'boolean' ? record.retirementOnboardingComplete : true;
 
     return {
       answers,
@@ -69,6 +70,7 @@ function loadDraft(): Plan {
       partnerJobLossYear,
       children,
       onboardingComplete,
+      retirementOnboardingComplete,
     };
   } catch {
     // Corrupt/inaccessible localStorage - autosave is best-effort, fall back to a fresh draft.
@@ -111,6 +113,10 @@ export interface UseDraftStateResult {
   /** Marks the questionnaire as done (finished normally or skipped) - idempotent, safe to call even
    *  if already `true`. Doesn't touch any other field. */
   completeOnboarding: () => void;
+  retirementOnboardingComplete: boolean;
+  /** Marks the Retirement tab's own first-visit questionnaire as done (finished normally or
+   *  skipped) - idempotent, safe to call even if already `true`. Doesn't touch any other field. */
+  completeRetirementOnboarding: () => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -127,13 +133,47 @@ export function useDraftState(): UseDraftStateResult {
   });
   const [isAutosaving, setIsAutosaving] = useState(false);
 
+  // use-travel's setDraft throws if called more than once in the same render cycle (its "already
+  // called" guard only resets in a useEffect, i.e. after the next commit) - two draft-mutating
+  // handlers firing back to back (a fast double-click, two different controls triggered in the same
+  // tick) can trip this before React gets a chance to re-render. Queue the overflow for the next
+  // microtask instead of letting the throw escape uncaught and freeze the app.
+  const pendingUpdatesRef = useRef<Parameters<typeof setDraft>[0][]>([]);
+
+  const flushPendingUpdates = useCallback(() => {
+    const next = pendingUpdatesRef.current.shift();
+    if (next === undefined) {
+      return;
+    }
+    try {
+      setDraft(next);
+    } catch {
+      pendingUpdatesRef.current.unshift(next);
+      queueMicrotask(flushPendingUpdates);
+      return;
+    }
+    if (pendingUpdatesRef.current.length > 0) {
+      queueMicrotask(flushPendingUpdates);
+    }
+  }, [setDraft]);
+
   // Marks a change as pending right where it originates (an event handler), rather than inferring
   // "pending" reactively from a `useEffect` keyed on `draft` - setState belongs in the handler that
   // causes it, not synchronously in an effect body watching for it after the fact.
   const updateDraft = useCallback((updater: Parameters<typeof setDraft>[0]) => {
     setIsAutosaving(true);
-    setDraft(updater);
-  }, [setDraft]);
+    if (pendingUpdatesRef.current.length > 0) {
+      // Already draining a backlog - keep this in order behind it rather than racing a direct call.
+      pendingUpdatesRef.current.push(updater);
+      return;
+    }
+    try {
+      setDraft(updater);
+    } catch {
+      pendingUpdatesRef.current.push(updater);
+      queueMicrotask(flushPendingUpdates);
+    }
+  }, [setDraft, flushPendingUpdates]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -309,6 +349,12 @@ export function useDraftState(): UseDraftStateResult {
     });
   }, [updateDraft]);
 
+  const completeRetirementOnboarding = useCallback(() => {
+    updateDraft((next) => {
+      next.retirementOnboardingComplete = true;
+    });
+  }, [updateDraft]);
+
   const undo = useCallback(() => back(), [back]);
   const redo = useCallback(() => forward(), [forward]);
 
@@ -343,6 +389,8 @@ export function useDraftState(): UseDraftStateResult {
     loadPlan,
     onboardingComplete: draft.onboardingComplete,
     completeOnboarding,
+    retirementOnboardingComplete: draft.retirementOnboardingComplete,
+    completeRetirementOnboarding,
     undo,
     redo,
     canUndo,

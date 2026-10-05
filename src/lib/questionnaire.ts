@@ -11,7 +11,7 @@ import {
   TAXES_INSURANCE_GROUP,
   type BaseFieldMeta,
 } from './baseFields';
-import { hasKids, hasPartnerIncome, ownsHome, wantsRetirementPlanning, type Answers } from './questions';
+import { hasKids, hasPartnerIncome, ownsHome, type Answers } from './questions';
 
 /** A gating yes/no or own/rent-style question, written straight into `Answers` - the questionnaire
  *  generalization of SPEC.md's original 3-question `Question` interface (§4.2), now used for
@@ -163,59 +163,46 @@ export const QUESTIONNAIRE_SECTIONS: QuestionnaireSection[] = [
     title: 'Assumptions',
     questions: sliderQuestions(fieldGroup('Assumptions')),
   },
-  {
-    id: 'retirement-branch',
-    kind: 'questions',
-    title: 'Retirement',
-    questions: [
-      {
-        kind: 'answer',
-        id: 'retirementNow',
-        prompt: 'Do you want to plan for retirement now?',
-        explanation:
-          "We'll ask about your Roth/Traditional/after-tax savings, Social Security, and pension - the same fields the Retirement tab already has. Choosing Later skips all of it for now (every retirement field keeps its default); you can fill it in anytime on the Retirement tab itself, or come back through this questionnaire later.",
-        type: 'boolean',
-        booleanLabels: ['Yes', 'Later'],
-      },
-    ],
-  },
-  // Story 6: only reached when the branch question above is answered "Yes" - reuses the exact
-  // field groups the Retirement tab's own sidebar renders (RetirementPage.tsx), promoted to shared
-  // exports in baseFields.tsx so there's one definition, not two.
+];
+
+// A separate flow from QUESTIONNAIRE_SECTIONS above, walked the first time someone opens the
+// Retirement tab rather than folded into the primary questionnaire - retirement planning is opt-in
+// and most people land on the Retirement tab (if ever) well after setting up their main plan, so
+// asking about Roth/Traditional/after-tax/Social Security up front just adds length to a flow most
+// answers of "Later" would skip anyway. Reuses the exact field groups the Retirement tab's own
+// sidebar renders (RetirementPage.tsx), promoted to shared exports in baseFields.tsx so there's one
+// definition, not two. No visibleIf gating here - reaching this flow at all already means "yes,
+// plan for retirement."
+export const RETIREMENT_QUESTIONNAIRE_SECTIONS: QuestionnaireSection[] = [
   {
     id: 'retirement-age',
     kind: 'questions',
     title: 'Retirement age',
     questions: sliderQuestions(RETIREMENT_AGE_GROUP.fields),
-    visibleIf: wantsRetirementPlanning,
   },
   {
     id: 'retirement-roth',
     kind: 'questions',
     title: 'Roth',
     questions: sliderQuestions(RETIREMENT_ROTH_GROUP.fields),
-    visibleIf: wantsRetirementPlanning,
   },
   {
     id: 'retirement-traditional',
     kind: 'questions',
     title: 'Traditional',
     questions: sliderQuestions(RETIREMENT_TRADITIONAL_GROUP.fields),
-    visibleIf: wantsRetirementPlanning,
   },
   {
     id: 'retirement-after-tax',
     kind: 'questions',
     title: 'After-tax',
     questions: sliderQuestions(RETIREMENT_AFTER_TAX_GROUP.fields),
-    visibleIf: wantsRetirementPlanning,
   },
   {
     id: 'retirement-income',
     kind: 'questions',
     title: 'Income in retirement',
     questions: sliderQuestions(RETIREMENT_INCOME_GROUP.fields),
-    visibleIf: wantsRetirementPlanning,
   },
 ];
 

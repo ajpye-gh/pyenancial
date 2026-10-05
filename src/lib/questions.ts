@@ -20,13 +20,6 @@ export function hasKids(answers: Answers): boolean {
   return answers.hasKids === true;
 }
 
-/** Defaults to false ("Later") when unset - gates the questionnaire's retirement branch (Story 6).
- *  Choosing "Later" here never blocks retirement planning; the Retirement tab's own sidebar still
- *  works exactly as today regardless of this answer. */
-export function wantsRetirementPlanning(answers: Answers): boolean {
-  return answers.retirementNow === true;
-}
-
 /** Defaults to 'single' when unset - consistent with partner fields already defaulting to "no
  *  partner" (partnerSalaryY0K: 0) rather than assuming a partner exists. */
 export function filingStatus(answers: Answers): FilingStatus {

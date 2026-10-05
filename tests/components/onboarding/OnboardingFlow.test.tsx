@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { OnboardingFlow } from '@src/components/onboarding/OnboardingFlow';
 import { DEFAULT_BASE_RANGES, baseDefaults } from '@src/lib/baseData';
 import type { Child } from '@src/lib/children';
+import { QUESTIONNAIRE_SECTIONS, RETIREMENT_QUESTIONNAIRE_SECTIONS, type QuestionnaireSection } from '@src/lib/questionnaire';
 import type { Answers } from '@src/lib/questions';
 import type { SalaryRaiseBreakpoint } from '@src/lib/salaryRaises';
 
@@ -32,7 +33,11 @@ function useChildrenControls() {
   };
 }
 
-function Harness({ onFinish }: Readonly<{ onFinish: () => void }>) {
+function Harness({
+  onFinish,
+  sections = QUESTIONNAIRE_SECTIONS,
+  initialScreen,
+}: Readonly<{ onFinish: () => void; sections?: QuestionnaireSection[]; initialScreen?: 'welcome' | 'question' }>) {
   const [answers, setAnswers] = useState<Answers>({});
   const [baseInputs, setBaseInputs] = useState(baseDefaults(DEFAULT_BASE_RANGES));
   const salaryRaiseControls = useSalaryRaiseControls(baseInputs.salaryY0K);
@@ -41,6 +46,7 @@ function Harness({ onFinish }: Readonly<{ onFinish: () => void }>) {
 
   return (
     <OnboardingFlow
+      sections={sections}
       answers={answers}
       onAnswer={(id, value) => setAnswers((prev) => ({ ...prev, [id]: value }))}
       baseInputs={baseInputs}
@@ -49,16 +55,18 @@ function Harness({ onFinish }: Readonly<{ onFinish: () => void }>) {
       salaryRaiseControls={salaryRaiseControls}
       partnerSalaryRaiseControls={partnerSalaryRaiseControls}
       childrenControls={childrenControls}
+      initialScreen={initialScreen}
       onFinish={onFinish}
     />
   );
 }
 
 /** Walks Start -> Getting started (Rent/No/No) -> Income -> Expenses -> Other assets ->
- *  Assumptions, skipping every repeatable "add another" step, landing on the retirement branch
- *  question ("Do you want to plan for retirement now?"). Renting (rather than owning) skips the
- *  8-field Housing & mortgage details section so the walk stays short. */
-async function walkToRetirementBranch(user: UserEvent) {
+ *  Assumptions, skipping every repeatable "add another" step, landing on the Assumptions summary
+ *  (the last section of the primary questionnaire - retirement isn't part of it, see
+ *  RETIREMENT_QUESTIONNAIRE_SECTIONS for that flow's own tests). Renting (rather than owning)
+ *  skips the 8-field Housing & mortgage details section so the walk stays short. */
+async function walkToAssumptionsSummary(user: UserEvent) {
   await user.click(screen.getByRole('button', { name: 'Start' }));
   await user.click(screen.getByRole('button', { name: 'Rent' }));
   await user.click(screen.getByRole('button', { name: 'No' })); // hasPartnerIncome
@@ -85,7 +93,7 @@ async function walkToRetirementBranch(user: UserEvent) {
   for (let i = 0; i < 3; i += 1) {
     await user.click(screen.getByRole('button', { name: 'Next' }));
   }
-  await user.click(screen.getByRole('button', { name: 'Continue' })); // Assumptions -> retirement branch
+  // Lands on the Assumptions section's own summary - the last one in the primary flow.
 }
 
 describe('OnboardingFlow', () => {
@@ -188,26 +196,14 @@ describe('OnboardingFlow', () => {
     expect(screen.queryByRole('heading', { name: /add each child/i })).not.toBeInTheDocument();
   });
 
-  it('reaches the retirement branch question with Yes/Later buttons after Assumptions', async () => {
-    const user = userEvent.setup();
-    render(<Harness onFinish={jest.fn()} />);
-    await walkToRetirementBranch(user);
-
-    expect(screen.getByRole('heading', { name: /plan for retirement now/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Yes' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
-  });
-
-  it('"Later" finishes the questionnaire without entering the retirement sections', async () => {
+  it('Assumptions is the last section - its summary Continue finishes the questionnaire, with no retirement section in between', async () => {
     const user = userEvent.setup();
     const onFinish = jest.fn();
     render(<Harness onFinish={onFinish} />);
-    await walkToRetirementBranch(user);
+    await walkToAssumptionsSummary(user);
 
-    await user.click(screen.getByRole('button', { name: 'Later' }));
-    // Auto-advances to the branch section's own summary first (same as any other gating question).
-    expect(screen.getByText('Later')).toBeInTheDocument();
-    expect(onFinish).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: /assumptions - your answers/i })).toBeInTheDocument();
+    expect(screen.queryByText(/plan for retirement now/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(onFinish).toHaveBeenCalledTimes(1);
@@ -230,14 +226,21 @@ describe('OnboardingFlow', () => {
     expect(screen.getByText(/\$4,375\/mo/)).toBeInTheDocument();
   });
 
-  it('"Yes" continues into the retirement questionnaire (Age, then Roth, ...)', async () => {
+});
+
+describe('OnboardingFlow with RETIREMENT_QUESTIONNAIRE_SECTIONS (the Retirement tab\'s own first-visit flow)', () => {
+  it('drops straight into Retirement age (Current age) with no welcome screen and no "plan for retirement now" gate', async () => {
+    render(<Harness onFinish={jest.fn()} sections={RETIREMENT_QUESTIONNAIRE_SECTIONS} initialScreen="question" />);
+
+    expect(screen.queryByRole('heading', { name: /welcome to pyenancial/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/plan for retirement now/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /current age/i })).toBeInTheDocument();
+  });
+
+  it('walks Retirement age -> Roth, finishing via "Finish later" skips the rest', async () => {
     const user = userEvent.setup();
     const onFinish = jest.fn();
-    render(<Harness onFinish={onFinish} />);
-    await walkToRetirementBranch(user);
-
-    await user.click(screen.getByRole('button', { name: 'Yes' }));
-    await user.click(screen.getByRole('button', { name: 'Continue' })); // branch summary -> Retirement age
+    render(<Harness onFinish={onFinish} sections={RETIREMENT_QUESTIONNAIRE_SECTIONS} initialScreen="question" />);
 
     expect(screen.getByRole('heading', { name: /current age/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next' }));
@@ -248,5 +251,8 @@ describe('OnboardingFlow', () => {
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(screen.getByRole('heading', { name: /current roth savings/i })).toBeInTheDocument();
     expect(onFinish).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Finish later' }));
+    expect(onFinish).toHaveBeenCalledTimes(1);
   });
 });

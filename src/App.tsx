@@ -20,6 +20,7 @@ import { useAutoHideOnScroll } from './hooks/useAutoHideOnScroll';
 import { useDraftState } from './hooks/useDraftState';
 import type { Plan } from './lib/plans';
 import { ownsHome } from './lib/questions';
+import { QUESTIONNAIRE_SECTIONS, RETIREMENT_QUESTIONNAIRE_SECTIONS } from './lib/questionnaire';
 import { DEFAULT_BASE_RANGES } from './lib/baseData';
 import { INSPECT_YEAR_FIELD } from './lib/baseFields';
 import { runModel, type IncomeStreamInputs } from './lib/model';
@@ -192,6 +193,7 @@ function App() {
   if (questionnaireOpen) {
     activeTabContent = (
       <OnboardingFlow
+        sections={QUESTIONNAIRE_SECTIONS}
         answers={draft.answers}
         onAnswer={draft.setAnswer}
         baseInputs={draft.baseInputs}
@@ -277,6 +279,25 @@ function App() {
   } else if (activeTab === 'mortgage') {
     activeTabContent = (
       <MortgagePage baseInputs={draft.baseInputs} ranges={DEFAULT_BASE_RANGES} onChange={draft.setBaseInput} answers={draft.answers} />
+    );
+  } else if (!draft.retirementOnboardingComplete) {
+    // First visit to the Retirement tab for this plan - walk its own short questionnaire before
+    // showing the full sidebar, same "answer once, see the plan" idea as the primary questionnaire
+    // but scoped to just the retirement fields (see lib/questionnaire.ts).
+    activeTabContent = (
+      <OnboardingFlow
+        sections={RETIREMENT_QUESTIONNAIRE_SECTIONS}
+        answers={draft.answers}
+        onAnswer={draft.setAnswer}
+        baseInputs={draft.baseInputs}
+        ranges={DEFAULT_BASE_RANGES}
+        onChange={draft.setBaseInput}
+        salaryRaiseControls={primaryIncomeControls}
+        partnerSalaryRaiseControls={partnerIncomeControls}
+        childrenControls={childrenControls}
+        initialScreen="question"
+        onFinish={() => draft.completeRetirementOnboarding()}
+      />
     );
   } else {
     activeTabContent = (

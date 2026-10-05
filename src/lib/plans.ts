@@ -26,6 +26,13 @@ export interface Plan {
    *  that predates this field - or an already-answered plan being loaded - never gets forced back
    *  through onboarding. See loadDraft (useDraftState.ts) and loadSavedPlan below. */
   onboardingComplete: boolean;
+  /** Whether this plan has been through the Retirement tab's own first-visit questionnaire (or had
+   *  it explicitly skipped) - drives whether App.tsx shows that flow or RetirementPage itself when
+   *  the Retirement tab is selected. Same "only ever false for a genuinely fresh plan, grandfathered
+   *  to true on load otherwise" rule as onboardingComplete above, and for the same reason: a plan
+   *  that predates this field (or already has retirement numbers filled in) shouldn't get forced
+   *  through it. */
+  retirementOnboardingComplete: boolean;
 }
 
 export function freshPlan(): Plan {
@@ -39,6 +46,7 @@ export function freshPlan(): Plan {
     partnerJobLossYear: undefined,
     children: [],
     onboardingComplete: false,
+    retirementOnboardingComplete: false,
   };
 }
 
@@ -92,6 +100,9 @@ export function isValidPlan(value: unknown): value is Plan {
     return false;
   }
   if (plan.onboardingComplete !== undefined && typeof plan.onboardingComplete !== 'boolean') {
+    return false;
+  }
+  if (plan.retirementOnboardingComplete !== undefined && typeof plan.retirementOnboardingComplete !== 'boolean') {
     return false;
   }
   return true;
@@ -156,5 +167,10 @@ export function loadSavedPlan(name: string): Plan | null {
   if (!plan) {
     return null;
   }
-  return { ...plan, baseInputs: withBaseInputDefaults(plan.baseInputs), onboardingComplete: plan.onboardingComplete ?? true };
+  return {
+    ...plan,
+    baseInputs: withBaseInputDefaults(plan.baseInputs),
+    onboardingComplete: plan.onboardingComplete ?? true,
+    retirementOnboardingComplete: plan.retirementOnboardingComplete ?? true,
+  };
 }

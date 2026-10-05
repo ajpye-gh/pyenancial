@@ -5,7 +5,7 @@ import type { BaseFieldId } from '../../lib/baseFields';
 import type { BaseInputs, BaseRanges } from '../../lib/baseData';
 import { formatSliderValue } from '../../lib/format';
 import type { Answers } from '../../lib/questions';
-import { QUESTIONNAIRE_SECTIONS, visibleSections, type QuestionnaireSection, type RepeatableStep } from '../../lib/questionnaire';
+import { visibleSections, type QuestionnaireSection, type RepeatableStep } from '../../lib/questionnaire';
 import { QuestionScreen } from './QuestionScreen';
 import { RepeatableStepScreen } from './RepeatableStepScreen';
 import { SectionSummary } from './SectionSummary';
@@ -14,6 +14,11 @@ import { WelcomePage } from './WelcomePage';
 type Screen = 'welcome' | 'question' | 'repeatable' | 'summary';
 
 interface OnboardingFlowProps {
+  /** The flow to walk - QUESTIONNAIRE_SECTIONS for the primary onboarding, or
+   *  RETIREMENT_QUESTIONNAIRE_SECTIONS for the Retirement tab's own first-visit flow (see
+   *  lib/questionnaire.ts). This component only knows how to walk whatever section list it's
+   *  given - which flow that is, is the caller's call. */
+  sections: QuestionnaireSection[];
   answers: Answers;
   onAnswer: (id: string, value: boolean | string) => void;
   baseInputs: BaseInputs;
@@ -58,11 +63,13 @@ function repeatableSummaryRows(
 }
 
 /** Orchestrates the welcome screen -> one-question-at-a-time sections (with an optional
- *  repeatable "add another" step) -> per-section summary flow (Stories 1-4 in features.md).
- *  Sections/questions are recomputed live from `visibleSections` on every render, so answering a
- *  gating question immediately changes what's ahead - same rule the sidebar already applies via
- *  visibleBaseFieldGroups. */
+ *  repeatable "add another" step) -> per-section summary flow (Stories 1-4 in features.md), for
+ *  whichever `sections` list the caller passes in (the primary questionnaire or the Retirement
+ *  tab's own flow - see the `sections` prop). Sections/questions are recomputed live from
+ *  `visibleSections` on every render, so answering a gating question immediately changes what's
+ *  ahead - same rule the sidebar already applies via visibleBaseFieldGroups. */
 export function OnboardingFlow({
+  sections: allSections,
   answers,
   onAnswer,
   baseInputs,
@@ -81,7 +88,7 @@ export function OnboardingFlow({
   // to that summary instead of continuing the normal forward walk through the rest of the section.
   const [returnToSummary, setReturnToSummary] = useState(false);
 
-  const sections = visibleSections(QUESTIONNAIRE_SECTIONS, answers);
+  const sections = visibleSections(allSections, answers);
   const currentSection = sections[Math.min(sectionIndex, sections.length - 1)];
   const activeRepeatable = repeatableVisibleFor(currentSection, answers);
   const totalQuestions = sections.reduce((sum, section) => sum + section.questions.length, 0);
