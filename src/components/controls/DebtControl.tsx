@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SliderField } from './SliderField';
 import { DebtToggle } from '../debt/DebtToggle';
+import { Tooltip } from '../Tooltip';
 import type { BaseInputs, BaseRanges } from '../../lib/baseData';
 import { DEBT_EXTRA_PAYMENT_FIELD, type BaseFieldId } from '../../lib/baseFields';
 import type { Debt } from '../../lib/debts';
@@ -47,7 +48,9 @@ export function DebtControl({ answers, onAnswer, debts, ranges, values, onChange
           {tracking && (
             <>
               <div className="debt-control__readout">
-                <span>Minimum payments</span>
+                <Tooltip tip="Sum of each debt's minimum payment, entered on the Debt tab - edit individual debts there, not here.">
+                  Minimum payments
+                </Tooltip>
                 <span className="debt-control__readout-value">{formatCurrency(totalMinPayments)}/mo</span>
               </div>
               <SliderField
