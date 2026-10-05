@@ -1,5 +1,6 @@
 import type { BaseInputs } from './baseData';
 import type { Child } from './children';
+import { buildDebtPayoffSchedule, type Debt, type DebtPayoffStrategy } from './debtPayoff';
 import { isPurchaseGoal, type RecurringGoal } from './goals';
 import type { SalaryRaiseBreakpoint } from './salaryRaises';
 
@@ -28,6 +29,15 @@ export interface ModelInputs {
   children: Child[];
   primaryIncome: IncomeStreamInputs;
   partnerIncome: IncomeStreamInputs;
+  /** High-interest, non-mortgage debt (see the Debt tab/debtPayoff.ts) - rolls up into a single
+   *  monthly cost (see YearSnapshot.debtCost) that subtracts from free cash, same as housingCost/
+   *  purchaseCosts. Pass `debts: []` to exclude entirely (e.g. when the Debt tab's hasDebt toggle is
+   *  off) rather than threading that toggle through this module. */
+  debtPayoff: {
+    debts: Debt[];
+    strategy: DebtPayoffStrategy;
+    extraMonthlyBudget: number;
+  };
 }
 
 export interface YearSnapshot {
@@ -39,6 +49,10 @@ export interface YearSnapshot {
   /** Monthly cost from completed non-property purchase goals (e.g. a boat) - additive on top of
    *  housingCost, unlike a completed property purchase which replaces it (see computeYearFigures). */
   purchaseCosts: number;
+  /** Total $/mo actually going toward debt payoff this year (minimums + extra budget/rollover, see
+   *  debtPayoff.ts) - $0 once every debt in ModelInputs.debtPayoff.debts is paid off, or always $0
+   *  if that array is empty. */
+  debtCost: number;
   totalExpenses: number;
   freeCash: number;
   goalContributions: Record<string, number>;
@@ -333,6 +347,10 @@ interface YearContext {
   nonHousingLiving: number;
   fixedHousing: number;
   inflatingHousingBase: number;
+  /** Total $/mo going toward debt, indexed by year (see buildDebtPayoffSchedule) - index clamped to
+   *  the schedule's actual length when read (see computeYearFigures), since it can finish before or
+   *  (if stalled) run past HORIZON_YEARS. */
+  debtPaymentByYear: number[];
   /** Live reference to runModel's goalBalances, mutated in place by advanceGoalBalances each year
    *  after this year's figures are computed - so it always reflects the balance as of the *previous*
    *  year when read here, which (thanks to the endYear freeze) is exactly a completed goal's frozen
@@ -347,6 +365,7 @@ interface YearFigures {
   kidsCost: number;
   housingCost: number;
   purchaseCosts: number;
+  debtCost: number;
   goalContributions: Record<string, number>;
   totalExpenses: number;
   freeCash: number;
@@ -390,6 +409,7 @@ function computeYearFigures(year: number, ctx: YearContext): YearFigures {
   const kidsCost = childCount * ctx.base.costPerKidMo * inflationFactor;
   const housingCost = computeHousingCost(year, ctx, inflationFactor);
   const purchaseCosts = computePurchaseCosts(year, ctx.goals, inflationFactor);
+  const debtCost = ctx.debtPaymentByYear[Math.min(year, ctx.debtPaymentByYear.length - 1)] ?? 0;
 
   const goalContributions: Record<string, number> = {};
   let goalTotal = 0;
@@ -399,7 +419,7 @@ function computeYearFigures(year: number, ctx: YearContext): YearFigures {
     goalTotal += amount;
   }
 
-  const totalExpenses = livingCosts + kidsCost + housingCost + purchaseCosts;
+  const totalExpenses = livingCosts + kidsCost + housingCost + purchaseCosts + debtCost;
   const freeCash = income - totalExpenses - goalTotal;
 
   return {
@@ -409,6 +429,7 @@ function computeYearFigures(year: number, ctx: YearContext): YearFigures {
     kidsCost,
     housingCost,
     purchaseCosts,
+    debtCost,
     goalContributions,
     totalExpenses,
     freeCash,
@@ -440,7 +461,13 @@ function buildVerdict(finalUnallocated: number, everNegative: boolean, firstNega
 }
 
 export function runModel(inputs: ModelInputs): ModelResult {
-  const { base, ownsHome, goals, children, primaryIncome, partnerIncome } = inputs;
+  const { base, ownsHome, goals, children, primaryIncome, partnerIncome, debtPayoff } = inputs;
+
+  // Built once from today's debts/strategy/extra budget - rollover defaults true (the with-strategy
+  // schedule), since this models what's actually being paid, not the minimums-only baseline the Debt
+  // tab's own chart separately compares against.
+  const debtSchedule = buildDebtPayoffSchedule(debtPayoff.debts, debtPayoff.strategy, debtPayoff.extraMonthlyBudget);
+  const debtPaymentByYear = debtSchedule.points.map((point) => point.monthlyPaymentNominal);
 
   const investmentReturn = base.investmentReturnPct;
   const cashGrowth = base.cashGrowthPct;
@@ -491,6 +518,7 @@ export function runModel(inputs: ModelInputs): ModelResult {
     nonHousingLiving,
     fixedHousing,
     inflatingHousingBase,
+    debtPaymentByYear,
     goalBalances,
   };
 
@@ -520,6 +548,7 @@ export function runModel(inputs: ModelInputs): ModelResult {
         kidsCost: figures.kidsCost,
         housingCost: figures.housingCost,
         purchaseCosts: figures.purchaseCosts,
+        debtCost: figures.debtCost,
         totalExpenses: figures.totalExpenses,
         freeCash,
         goalContributions: figures.goalContributions,

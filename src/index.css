@@ -1310,6 +1310,39 @@ input.slider-field__value-input {
   font-variant-numeric: tabular-nums;
 }
 
+/* Debt */
+
+.debt-card__payoff-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-bottom: 6px;
+}
+
+/* Overrides .goal-card--collapsed's 100px cap - see DebtCard.tsx's cardClassName comment. */
+.debt-card--collapsed {
+  max-height: 132px;
+}
+
+.debt-control__readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.debt-control__readout-value {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 .add-goal-card {
   display: flex;
   flex-direction: column;

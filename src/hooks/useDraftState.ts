@@ -4,6 +4,7 @@ import type { Answers } from '../lib/questions';
 import type { BaseInputs } from '../lib/baseData';
 import type { BaseFieldId } from '../lib/baseFields';
 import { generateChildId, isValidChild, nextChildYear, type Child } from '../lib/children';
+import { isValidDebt, type Debt } from '../lib/debts';
 import { enforceExclusiveEquity, isValidGoal, rebalanceAllocations, sanitizeGoal, type Goal } from '../lib/goals';
 import { freshPlan, isValidJobLossYear, type Plan } from '../lib/plans';
 import {
@@ -44,6 +45,7 @@ function loadDraft(): Plan {
       ? record.partnerJobLossYear
       : fresh.partnerJobLossYear;
     const children = Array.isArray(record.children) ? record.children.filter(isValidChild) : fresh.children;
+    const debts = Array.isArray(record.debts) ? record.debts.filter(isValidDebt) : fresh.debts;
 
     const answersValue: unknown = record.answers;
     const answers = typeof answersValue === 'object' && answersValue !== null ? (answersValue as Answers) : fresh.answers;
@@ -69,6 +71,7 @@ function loadDraft(): Plan {
       partnerSalaryRaises,
       partnerJobLossYear,
       children,
+      debts,
       onboardingComplete,
       retirementOnboardingComplete,
     };
@@ -105,6 +108,10 @@ export interface UseDraftStateResult {
   addChild: () => void;
   removeChild: (id: string) => void;
   updateChild: (id: string, year: number) => void;
+  debts: Debt[];
+  addDebt: (debt: Debt) => void;
+  removeDebt: (id: string) => void;
+  updateDebt: (id: string, patch: Partial<Omit<Debt, 'id'>>) => void;
   /** Current draft, shaped for a named Save (see lib/plans.ts). */
   planForSaving: () => Plan;
   /** Replaces the entire draft with a loaded plan (see lib/plans.ts). */
@@ -337,6 +344,24 @@ export function useDraftState(): UseDraftStateResult {
     });
   }, [updateDraft]);
 
+  const addDebt = useCallback((debt: Debt) => {
+    updateDraft((next) => {
+      next.debts.push(debt);
+    });
+  }, [updateDraft]);
+
+  const removeDebt = useCallback((id: string) => {
+    updateDraft((next) => {
+      next.debts = next.debts.filter((debt) => debt.id !== id);
+    });
+  }, [updateDraft]);
+
+  const updateDebt = useCallback((id: string, patch: Partial<Omit<Debt, 'id'>>) => {
+    updateDraft((next) => {
+      next.debts = next.debts.map((debt) => (debt.id === id ? { ...debt, ...patch } : debt));
+    });
+  }, [updateDraft]);
+
   const planForSaving = useCallback((): Plan => draft, [draft]);
 
   const loadPlan = useCallback((plan: Plan) => {
@@ -385,6 +410,10 @@ export function useDraftState(): UseDraftStateResult {
     addChild,
     removeChild,
     updateChild,
+    debts: draft.debts,
+    addDebt,
+    removeDebt,
+    updateDebt,
     planForSaving,
     loadPlan,
     onboardingComplete: draft.onboardingComplete,

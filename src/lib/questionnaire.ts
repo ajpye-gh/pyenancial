@@ -108,6 +108,14 @@ const GETTING_STARTED_QUESTIONS: GatingQuestion[] = [
     explanation: "If yes, we'll ask when each child arrives (or already has). If not, we'll skip that step.",
     type: 'boolean',
   },
+  {
+    kind: 'answer',
+    id: 'hasDebt',
+    prompt: 'Do you have any debt outside your mortgage?',
+    explanation:
+      "Credit cards, personal loans, auto loans, student loans - anything with its own interest rate and minimum payment. If yes, you'll be able to track and plan payoff on its own Debt tab. If not, we'll skip that.",
+    type: 'boolean',
+  },
 ];
 
 // "Other assets" deliberately excludes the Assets group's home/mortgage fields (HOME_VALUE_FIELD,

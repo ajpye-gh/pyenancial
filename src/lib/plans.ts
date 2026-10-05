@@ -1,6 +1,7 @@
 import type { Answers } from './questions';
 import { DEFAULT_BASE_RANGES, baseDefaults, type BaseInputs } from './baseData';
 import { isValidChild, type Child } from './children';
+import { isValidDebt, type Debt } from './debts';
 import { isValidGoal, type Goal } from './goals';
 import { DEFAULT_SALARY_RAISES, generateBreakpointId, isValidBreakpoint, type SalaryRaiseBreakpoint } from './salaryRaises';
 
@@ -19,6 +20,10 @@ export interface Plan {
   partnerSalaryRaises: SalaryRaiseBreakpoint[];
   partnerJobLossYear: number | undefined;
   children: Child[];
+  /** High-interest, non-mortgage debts tracked on the Debt tab - see debts.ts. Only meaningful when
+   *  `hasDebt(answers)` is true, but kept populated even when that toggle is off (see
+   *  questions.ts's hasDebt), so switching the toggle off never discards entered debts. */
+  debts: Debt[];
   /** Whether this plan has been through the onboarding questionnaire (or had it explicitly
    *  skipped) - drives whether App.tsx shows the welcome/questionnaire flow or the normal tabs.
    *  Only ever `false` for a genuinely fresh, never-touched plan (see freshPlan below); every other
@@ -45,6 +50,7 @@ export function freshPlan(): Plan {
     partnerSalaryRaises: [],
     partnerJobLossYear: undefined,
     children: [],
+    debts: [],
     onboardingComplete: false,
     retirementOnboardingComplete: false,
   };
@@ -97,6 +103,9 @@ export function isValidPlan(value: unknown): value is Plan {
     return false;
   }
   if (plan.partnerJobLossYear !== undefined && !isValidJobLossYear(plan.partnerJobLossYear)) {
+    return false;
+  }
+  if (plan.debts !== undefined && (!Array.isArray(plan.debts) || !plan.debts.every(isValidDebt))) {
     return false;
   }
   if (plan.onboardingComplete !== undefined && typeof plan.onboardingComplete !== 'boolean') {
@@ -170,6 +179,7 @@ export function loadSavedPlan(name: string): Plan | null {
   return {
     ...plan,
     baseInputs: withBaseInputDefaults(plan.baseInputs),
+    debts: plan.debts ?? [],
     onboardingComplete: plan.onboardingComplete ?? true,
     retirementOnboardingComplete: plan.retirementOnboardingComplete ?? true,
   };
