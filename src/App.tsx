@@ -194,6 +194,19 @@ function App() {
       value: formatCurrencyCompact(result.unallocatedAtInspect),
       tone: result.unallocatedAtInspect < 0 ? 'danger' : undefined,
     },
+    // Only once there's actually a nonzero debt payment to show - mirrors BreakdownTable's own
+    // `debtCost > 0` gating. Called out as its own metric card (not just a muted row in the
+    // breakdown table below) since it's a direct drag on free cash above and shouldn't require
+    // expanding/scrolling to notice - see the Debt tab for the full payoff detail.
+    ...(result.snapshot.debtCost > 0
+      ? [
+          {
+            id: 'debt-payments-inspect',
+            label: 'Debt payments, inspect yr',
+            value: `${formatCurrency(result.snapshot.debtCost)}/mo`,
+          },
+        ]
+      : []),
   ];
 
   let activeTabContent: ReactNode;
