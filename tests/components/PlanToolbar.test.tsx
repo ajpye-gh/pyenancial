@@ -3,9 +3,11 @@ import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { PlanToolbar } from '@src/components/PlanToolbar';
 import { freshPlan, listSavedPlans, loadSavedPlan, savePlan, type Plan } from '@src/lib/plans';
+import { buildShareUrl } from '@src/lib/planShare';
 
 beforeEach(() => {
   localStorage.clear();
+  window.history.replaceState(null, '', '/');
 });
 
 function renderToolbar(overrides: Partial<ComponentProps<typeof PlanToolbar>> = {}) {
@@ -485,5 +487,133 @@ describe('PlanToolbar import', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/valid JSON/);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(onImportPlan).not.toHaveBeenCalled();
+  });
+});
+
+describe('PlanToolbar share', () => {
+  /** `userEvent.setup()` installs its own navigator.clipboard stub (jsdom has no real Clipboard
+   *  API), replacing anything set beforehand - so the stub has to exist first, and we spy on
+   *  *its* writeText rather than defining our own navigator.clipboard. */
+  function setupClipboard() {
+    const user = userEvent.setup();
+    const writeText = jest.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+    return { user, writeText };
+  }
+
+  it('warns about financial details before copying, and copies only once confirmed', async () => {
+    const { user, writeText } = setupClipboard();
+    const plan = freshPlan();
+
+    renderToolbar({ planForSaving: () => plan });
+    await user.click(screen.getByRole('button', { name: 'Share Plan' }));
+
+    const warning = await screen.findByRole('alertdialog');
+    expect(within(warning).getByText(/financial details/)).toBeInTheDocument();
+    expect(writeText).not.toHaveBeenCalled();
+
+    await user.click(within(warning).getByRole('button', { name: 'Copy' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?plan='));
+    const [url] = writeText.mock.calls[0];
+    expect(new URL(url).searchParams.has('plan')).toBe(true);
+  });
+
+  it('copies nothing if the warning is cancelled', async () => {
+    const { user, writeText } = setupClipboard();
+
+    renderToolbar();
+    await user.click(screen.getByRole('button', { name: 'Share Plan' }));
+
+    const warning = await screen.findByRole('alertdialog');
+    await user.click(within(warning).getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it('shows an error if the clipboard write fails', async () => {
+    const { user, writeText } = setupClipboard();
+    writeText.mockRejectedValue(new Error('denied'));
+
+    renderToolbar();
+    await user.click(screen.getByRole('button', { name: 'Share Plan' }));
+    const warning = await screen.findByRole('alertdialog');
+    await user.click(within(warning).getByRole('button', { name: 'Copy' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('denied');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('PlanToolbar incoming share link', () => {
+  it('prompts to name the shared plan, then saves+loads it and cleans the URL', async () => {
+    const user = userEvent.setup();
+    const shared: Plan = { ...freshPlan(), answers: { housing: 'rent' } };
+    const onPlanLoaded = jest.fn();
+    window.history.replaceState(null, '', buildShareUrl(shared));
+
+    renderToolbar({ activePlanName: 'Existing plan', onPlanLoaded });
+
+    expect(window.location.search).toBe('');
+
+    const { dialog, confirmWith } = await findPromptDialog();
+    expect(within(dialog).getByText('Name this imported plan:')).toBeInTheDocument();
+    await confirmWith(user, 'Shared with me', 'Import');
+
+    expect(loadSavedPlan('Shared with me')).toEqual(shared);
+    expect(onPlanLoaded).toHaveBeenCalledWith('Shared with me', shared);
+  });
+
+  it('falls back to an untitled view of the plan if naming is cancelled', async () => {
+    const user = userEvent.setup();
+    const shared = freshPlan();
+    const onImportPlan = jest.fn();
+    const onPlanLoaded = jest.fn();
+    window.history.replaceState(null, '', buildShareUrl(shared));
+
+    renderToolbar({ activePlanName: 'Existing plan', onImportPlan, onPlanLoaded });
+
+    const { cancelWith } = await findPromptDialog();
+    await cancelWith(user, 'Cancel');
+
+    expect(onImportPlan).toHaveBeenCalledWith(shared);
+    expect(onPlanLoaded).not.toHaveBeenCalled();
+  });
+
+  it('does not offer to back up an untitled draft - unlike Load, this runs on page load before the user did anything in this session', async () => {
+    const user = userEvent.setup();
+    const shared = freshPlan();
+    const onPlanLoaded = jest.fn();
+    const onPlanSaved = jest.fn();
+    const currentDraft: Plan = { ...freshPlan(), answers: { housing: 'rent' } };
+    window.history.replaceState(null, '', buildShareUrl(shared));
+
+    renderToolbar({ activePlanName: null, onPlanLoaded, onPlanSaved, planForSaving: () => currentDraft });
+
+    const { confirmWith } = await findPromptDialog();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await confirmWith(user, 'Shared with me', 'Import');
+
+    expect(onPlanSaved).not.toHaveBeenCalled();
+    expect(onPlanLoaded).toHaveBeenCalledWith('Shared with me', shared);
+  });
+
+  it('shows an error and cleans the URL for a link that is not a valid plan', async () => {
+    window.history.replaceState(null, '', '/?plan=not-valid-base64!!!');
+
+    renderToolbar();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('not a valid plan');
+    expect(window.location.search).toBe('');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('does nothing when the URL carries no share param', () => {
+    renderToolbar();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

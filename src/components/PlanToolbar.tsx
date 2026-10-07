@@ -2,7 +2,19 @@ import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent } from '
 import { useDialog } from '../hooks/useDialog';
 import { deletePlan, freshPlan, listSavedPlans, loadSavedPlan, savePlan, type Plan } from '../lib/plans';
 import { exportPlanFile, parsePlanFile, PYF_EXTENSION } from '../lib/planFiles';
-import { DownloadIcon, FolderIcon, PinwheelIcon, PlusIcon, RedoIcon, SaveIcon, TrashIcon, UndoIcon, UploadIcon } from './icons';
+import { buildShareUrl, clearSharedPlanFromLocation, readSharedPlanFromLocation } from '../lib/planShare';
+import {
+  DownloadIcon,
+  FolderIcon,
+  PinwheelIcon,
+  PlusIcon,
+  RedoIcon,
+  SaveIcon,
+  ShareIcon,
+  TrashIcon,
+  UndoIcon,
+  UploadIcon,
+} from './icons';
 
 /** Small grace period between the pointer leaving the Saved Plans trigger and the panel actually
  *  closing - without this, a fast diagonal move from the trigger toward the panel can register a
@@ -158,6 +170,64 @@ export function PlanToolbar({
       onPlanSaved(backupName, current);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save current plan.');
+    }
+  };
+
+  /** Picks up a plan encoded in the URL (see handleShare) on first mount. The share param is
+   *  stripped immediately - before any prompt is even shown - so the financial details it carries
+   *  don't linger in the address bar or browser history regardless of what the user does next.
+   *  Runs once: deps are intentionally empty, since this only ever reacts to the URL the app was
+   *  loaded with.
+   *
+   *  Unlike Load/New plan, this skips backupUntitledDraft's "save your current changes first?"
+   *  prompt - whatever's in the untitled draft at this point is just whatever the autosave last
+   *  held from before this page load, not something the user did in this session, so asking to
+   *  back it up is just noise on every share-link open rather than a meaningful safety net. */
+  useEffect(() => {
+    const result = readSharedPlanFromLocation();
+    if (!result.present) {
+      return;
+    }
+    clearSharedPlanFromLocation();
+    const shared = result.plan;
+    void (async () => {
+      if (!shared) {
+        setError('That share link is not a valid plan.');
+        return;
+      }
+      const name = await resolveSaveName('Name this imported plan:', 'Shared plan', { confirmLabel: 'Import' });
+      if (!name) {
+        // Cancelled naming - still show the imported plan, just not tied to any saved slot yet,
+        // same fallback handleFileChange uses for a cancelled file import.
+        onImportPlan(shared);
+        return;
+      }
+      try {
+        savePlan(name, shared);
+        setSavedPlans(listSavedPlans());
+        onPlanLoaded(name, shared);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not save imported plan.');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleShare = async () => {
+    const proceed = await confirm(
+      'This link encodes all of your financial details, not just the site URL - only share it with people you trust.',
+      { confirmLabel: 'Copy', cancelLabel: 'Cancel' },
+    );
+    if (!proceed) {
+      return;
+    }
+    try {
+      const url = buildShareUrl(planForSaving());
+      await navigator.clipboard.writeText(url);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not copy share link.');
     }
   };
 
@@ -344,6 +414,9 @@ export function PlanToolbar({
       </button>
       <button type="button" className="plan-toolbar__btn" title="Import .pyf" aria-label="Import .pyf" onClick={handleImportClick}>
         <UploadIcon size={16} />
+      </button>
+      <button type="button" className="plan-toolbar__btn" title="Share Plan" aria-label="Share Plan" onClick={handleShare}>
+        <ShareIcon size={16} />
       </button>
       <input
         ref={fileInputRef}

@@ -61,6 +61,10 @@ function App() {
     draft.loadPlan(plan);
     setActivePlanName(name);
     setSavedSnapshot(JSON.stringify(plan));
+    // Covers Saved Plans' Load, plus a named Import (file or share link) - none of these should
+    // trigger onboarding, even on a first-ever visit where questionnaireOpen initialized to true
+    // before this plan was loaded (see questionnaireOpen's init comment above).
+    setQuestionnaireOpen(false);
   };
 
   const handlePlanSaved = (name: string, plan: Plan) => {
@@ -79,6 +83,7 @@ function App() {
     draft.loadPlan(plan);
     setActivePlanName(null);
     setSavedSnapshot(null);
+    setQuestionnaireOpen(false);
   };
 
   const handlePlanCreated = (name: string, plan: Plan) => {
