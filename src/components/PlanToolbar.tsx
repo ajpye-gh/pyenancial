@@ -24,6 +24,9 @@ const CLOSE_DELAY_MS = 150;
 interface PlanToolbarProps {
   /** Name of the saved plan the current draft was loaded from/saved as, or null if untitled. */
   activePlanName: string | null;
+  /** Whether the draft has diverged from `activePlanName`'s last saved snapshot - drives the dot
+   *  next to the active-plan name, paired with Save/Share (see App.tsx). */
+  isDirty: boolean;
   onPlanLoaded: (name: string, plan: Plan) => void;
   onPlanSaved: (name: string, plan: Plan) => void;
   onPlanDeleted: (name: string) => void;
@@ -43,6 +46,7 @@ interface PlanToolbarProps {
  *  lives at the top right of the header, directly right of the active-plan indicator. */
 export function PlanToolbar({
   activePlanName,
+  isDirty,
   onPlanLoaded,
   onPlanSaved,
   onPlanDeleted,
@@ -350,109 +354,118 @@ export function PlanToolbar({
   };
 
   return (
-    <div className="plan-toolbar">
-      <button type="button" className="plan-toolbar__btn" title="Undo" aria-label="Undo" onClick={onUndo} disabled={!canUndo}>
-        <UndoIcon size={16} />
-      </button>
-      <button type="button" className="plan-toolbar__btn" title="Redo" aria-label="Redo" onClick={onRedo} disabled={!canRedo}>
-        <RedoIcon size={16} />
-      </button>
+    <div className="plan-toolbar-wrap">
+      <div className="plan-toolbar">
+        <button type="button" className="plan-toolbar__btn" title="Undo" aria-label="Undo" onClick={onUndo} disabled={!canUndo}>
+          <UndoIcon size={16} />
+        </button>
+        <button type="button" className="plan-toolbar__btn" title="Redo" aria-label="Redo" onClick={onRedo} disabled={!canRedo}>
+          <RedoIcon size={16} />
+        </button>
 
-      <div className="plan-toolbar__divider" />
+        <div className="plan-toolbar__divider" />
 
-      <button type="button" className="plan-toolbar__btn" title="New plan" aria-label="New plan" onClick={handleNewPlan}>
-        <PlusIcon size={16} />
-      </button>
+        <button type="button" className="plan-toolbar__btn" title="New plan" aria-label="New plan" onClick={handleNewPlan}>
+          <PlusIcon size={16} />
+        </button>
 
-      <div
-        className="plan-toolbar__dropdown-wrap"
-        ref={dropdownRef}
-        onMouseEnter={openPanel}
-        onMouseLeave={schedulePanelClose}
-      >
+        <div
+          className="plan-toolbar__dropdown-wrap"
+          ref={dropdownRef}
+          onMouseEnter={openPanel}
+          onMouseLeave={schedulePanelClose}
+        >
+          <button
+            type="button"
+            className="plan-toolbar__btn"
+            title="Saved Plans"
+            aria-label="Saved Plans"
+            aria-haspopup="menu"
+            aria-expanded={panelOpen}
+            onClick={openPanel}
+          >
+            <FolderIcon size={16} />
+          </button>
+          {panelOpen && (
+            <div className="plan-toolbar__panel" role="menu">
+              {savedPlans.length === 0 ? (
+                <span className="plan-toolbar__item plan-toolbar__item--disabled">(nothing saved)</span>
+              ) : (
+                savedPlans.map((name) => (
+                  <div className="plan-toolbar__row" key={name}>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={
+                        name === activePlanName ? 'plan-toolbar__item plan-toolbar__item--active' : 'plan-toolbar__item'
+                      }
+                      onClick={() => handleLoad(name)}
+                    >
+                      {name}
+                    </button>
+                    <button
+                      type="button"
+                      className="plan-toolbar__row-btn"
+                      aria-label={`Export "${name}"`}
+                      onClick={(event) => handleExport(name, event)}
+                    >
+                      <DownloadIcon size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="plan-toolbar__row-btn"
+                      aria-label={`Share "${name}"`}
+                      onClick={(event) => void handleShareSaved(name, event)}
+                    >
+                      <ShareIcon size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="plan-toolbar__row-btn"
+                      aria-label={`Delete "${name}"`}
+                      onClick={(event) => handleDelete(name, event)}
+                    >
+                      <TrashIcon size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
+              <div className="plan-toolbar__panel-divider" />
+              <button type="button" role="menuitem" className="plan-toolbar__item" onClick={handleImportClick}>
+                <span className="settings-menu__row-label">
+                  <UploadIcon size={14} />
+                  Import .pyf
+                </span>
+              </button>
+              {error && (
+                <span className="plan-toolbar__panel-error" role="alert">
+                  {error}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="plan-toolbar plan-toolbar--active">
+        <span className="plan-toolbar__active">
+          <span className="plan-toolbar__active-name">{activePlanName ?? 'Untitled plan'}</span>
+          {isDirty && <span className="plan-toolbar__active-dot" title="Unsaved changes" aria-label="Unsaved changes" />}
+        </span>
         <button
           type="button"
           className="plan-toolbar__btn"
-          title="Saved Plans"
-          aria-label="Saved Plans"
-          aria-haspopup="menu"
-          aria-expanded={panelOpen}
-          onClick={openPanel}
+          title={isAutosaving ? 'Autosaving…' : 'Save Plan'}
+          aria-label="Save Plan"
+          onClick={handleSave}
         >
-          <FolderIcon size={16} />
+          {isAutosaving ? <PinwheelIcon size={16} /> : <SaveIcon size={16} />}
         </button>
-        {panelOpen && (
-          <div className="plan-toolbar__panel" role="menu">
-            {savedPlans.length === 0 ? (
-              <span className="plan-toolbar__item plan-toolbar__item--disabled">(nothing saved)</span>
-            ) : (
-              savedPlans.map((name) => (
-                <div className="plan-toolbar__row" key={name}>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className={
-                      name === activePlanName ? 'plan-toolbar__item plan-toolbar__item--active' : 'plan-toolbar__item'
-                    }
-                    onClick={() => handleLoad(name)}
-                  >
-                    {name}
-                  </button>
-                  <button
-                    type="button"
-                    className="plan-toolbar__row-btn"
-                    aria-label={`Export "${name}"`}
-                    onClick={(event) => handleExport(name, event)}
-                  >
-                    <DownloadIcon size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    className="plan-toolbar__row-btn"
-                    aria-label={`Share "${name}"`}
-                    onClick={(event) => void handleShareSaved(name, event)}
-                  >
-                    <ShareIcon size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    className="plan-toolbar__row-btn"
-                    aria-label={`Delete "${name}"`}
-                    onClick={(event) => handleDelete(name, event)}
-                  >
-                    <TrashIcon size={14} />
-                  </button>
-                </div>
-              ))
-            )}
-            <div className="plan-toolbar__panel-divider" />
-            <button type="button" role="menuitem" className="plan-toolbar__item" onClick={handleImportClick}>
-              <span className="settings-menu__row-label">
-                <UploadIcon size={14} />
-                Import .pyf
-              </span>
-            </button>
-            {error && (
-              <span className="plan-toolbar__panel-error" role="alert">
-                {error}
-              </span>
-            )}
-          </div>
-        )}
+        <button type="button" className="plan-toolbar__btn" title="Share Plan" aria-label="Share Plan" onClick={handleShare}>
+          <ShareIcon size={16} />
+        </button>
       </div>
 
-      <button
-        type="button"
-        className="plan-toolbar__btn"
-        title={isAutosaving ? 'Autosaving…' : 'Save Plan'}
-        aria-label="Save Plan"
-        onClick={handleSave}
-      >
-        {isAutosaving ? <PinwheelIcon size={16} /> : <SaveIcon size={16} />}
-      </button>
-      <button type="button" className="plan-toolbar__btn" title="Share Plan" aria-label="Share Plan" onClick={handleShare}>
-        <ShareIcon size={16} />
-      </button>
       <input
         ref={fileInputRef}
         type="file"

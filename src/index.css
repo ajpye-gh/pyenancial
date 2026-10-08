@@ -330,30 +330,6 @@ legend {
   }
 }
 
-.page__active-plan {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.page__active-plan-name {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.page__active-plan-dot {
-  flex-shrink: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
 .page__section-title {
   font-size: 13px;
   font-weight: 600;
@@ -465,8 +441,15 @@ legend {
 
 /* Plan toolbar */
 
-.plan-toolbar {
+.plan-toolbar-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.plan-toolbar {
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -475,6 +458,48 @@ legend {
   border-radius: var(--radius);
   padding: 4px;
   background: var(--bg);
+}
+
+.plan-toolbar--active {
+  gap: 4px;
+}
+
+.plan-toolbar__active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 2px 0 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+
+  /* No room for the name alongside Undo/Redo/New/Saved Plans + Save/Share on a phone-width bottom
+   *  bar - the dot (if dirty) and the two action icons are what's left, same as before this pill
+   *  existed. The name itself isn't shown anywhere else on mobile, but there's nowhere to put it
+   *  that doesn't either truncate past legibility or push the Settings gear off-screen. */
+  @media (max-width: 640px) {
+    padding: 0 2px;
+  }
+}
+
+.plan-toolbar__active-name {
+  min-width: 0;
+  max-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  @media (max-width: 640px) {
+    display: none;
+  }
+}
+
+.plan-toolbar__active-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 .plan-toolbar__btn {

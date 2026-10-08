@@ -13,6 +13,7 @@ beforeEach(() => {
 function renderToolbar(overrides: Partial<ComponentProps<typeof PlanToolbar>> = {}) {
   const props: ComponentProps<typeof PlanToolbar> = {
     activePlanName: null,
+    isDirty: false,
     onPlanLoaded: jest.fn(),
     onPlanSaved: jest.fn(),
     onPlanDeleted: jest.fn(),
@@ -66,6 +67,20 @@ describe('PlanToolbar layout', () => {
     expect(screen.getByRole('button', { name: 'Save Plan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Share Plan' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Plan menu' })).not.toBeInTheDocument();
+  });
+
+  it('shows "Untitled plan" with no active plan, and no dirty dot', () => {
+    renderToolbar({ activePlanName: null, isDirty: false });
+
+    expect(screen.getByText('Untitled plan')).toBeInTheDocument();
+    expect(screen.queryByTitle('Unsaved changes')).not.toBeInTheDocument();
+  });
+
+  it('shows the active plan name, with a dirty dot only once it has diverged from its saved snapshot', () => {
+    renderToolbar({ activePlanName: 'Base case', isDirty: true });
+
+    expect(screen.getByText('Base case')).toBeInTheDocument();
+    expect(screen.getByTitle('Unsaved changes')).toBeInTheDocument();
   });
 
   it('disables/enables Undo and Redo per canUndo/canRedo, and wires clicks through', async () => {

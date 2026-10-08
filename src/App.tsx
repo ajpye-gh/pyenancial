@@ -370,12 +370,9 @@ function App() {
           </div>
         </nav>
         <div className="page__header-controls">
-          <span className="page__active-plan">
-            <span className="page__active-plan-name">{activePlanName ?? 'Untitled plan'}</span>
-            {isDirty && <span className="page__active-plan-dot" title="Unsaved changes" aria-label="Unsaved changes" />}
-          </span>
           <PlanToolbar
             activePlanName={activePlanName}
+            isDirty={isDirty}
             onPlanLoaded={handlePlanLoaded}
             onPlanSaved={handlePlanSaved}
             onPlanDeleted={handlePlanDeleted}
