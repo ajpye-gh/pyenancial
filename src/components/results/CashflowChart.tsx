@@ -25,12 +25,13 @@ const DESKTOP_HEIGHT = 240;
 const DESKTOP_PADDING = { top: 20, right: 58, bottom: 28, left: 58 };
 const MOBILE_WIDTH = 360;
 const MOBILE_HEIGHT = 260;
-// Right needs more room than left despite the narrower box: the cash axis uses formatCurrency
-// (full numbers, e.g. "$2,411") rather than the left axes' compact formatCurrencyCompact
-// ("$856k") - deliberately, since cash figures are small enough that compacting to the nearest
-// $1k would hide real differences. At the bumped mobile font-size, "$2,411" measures ~54 viewBox
-// units wide - this padding is sized to that, not shrunk to an amount that would clip it.
-const MOBILE_PADDING = { top: 18, right: 62, bottom: 24, left: 58 };
+// Right needs room for the cash axis's formatCurrency output (full numbers, not compacted - cash
+// figures are small enough that rounding to the nearest $1k would hide real differences). Sized to
+// a 5-digit value with thousands separator ("$25,323"), not just the 4-digit figures a modest
+// income happens to produce - easy to under-size if only tested at lower numbers.
+// Left is sized to formatCurrencyCompact's M-range output ("$2.94M") - wider than the "k" range
+// it switches from, and easy to miss if you only test with sub-$1M balances.
+const MOBILE_PADDING = { top: 18, right: 72, bottom: 24, left: 66 };
 const AXIS_TICK_COUNT = 4;
 const DESKTOP_AXIS_LABEL_STACK_OFFSET = 7;
 const MOBILE_AXIS_LABEL_STACK_OFFSET = 10;
