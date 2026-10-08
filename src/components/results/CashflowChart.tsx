@@ -32,7 +32,10 @@ const MOBILE_HEIGHT = 260;
 // Left is sized to formatCurrencyCompact's M-range output ("$2.94M") - wider than the "k" range
 // it switches from, and easy to miss if you only test with sub-$1M balances.
 const MOBILE_PADDING = { top: 18, right: 72, bottom: 24, left: 66 };
-const AXIS_TICK_COUNT = 4;
+const DESKTOP_AXIS_TICK_COUNT = 4;
+// Fewer y-axis values on mobile declutters the now-bigger-font labels, which sit closer together
+// (3 series' worth, two of them stacked on the same left edge) than desktop's smaller text did.
+const MOBILE_AXIS_TICK_COUNT = 3;
 const DESKTOP_AXIS_LABEL_STACK_OFFSET = 7;
 const MOBILE_AXIS_LABEL_STACK_OFFSET = 10;
 const DESKTOP_TOOLTIP_WIDTH = 148;
@@ -63,6 +66,7 @@ export function CashflowChart({ chart, primary }: Readonly<CashflowChartProps>) 
   const HEIGHT = isMobile ? MOBILE_HEIGHT : DESKTOP_HEIGHT;
   const PADDING = isMobile ? MOBILE_PADDING : DESKTOP_PADDING;
   const AXIS_LABEL_STACK_OFFSET = isMobile ? MOBILE_AXIS_LABEL_STACK_OFFSET : DESKTOP_AXIS_LABEL_STACK_OFFSET;
+  const AXIS_TICK_COUNT = isMobile ? MOBILE_AXIS_TICK_COUNT : DESKTOP_AXIS_TICK_COUNT;
   const TOOLTIP_WIDTH = isMobile ? MOBILE_TOOLTIP_WIDTH : DESKTOP_TOOLTIP_WIDTH;
   const TOOLTIP_ROW_HEIGHT = isMobile ? MOBILE_TOOLTIP_ROW_HEIGHT : DESKTOP_TOOLTIP_ROW_HEIGHT;
 
@@ -119,7 +123,13 @@ export function CashflowChart({ chart, primary }: Readonly<CashflowChartProps>) 
   const cashEverNegative = showCash && freeCash.some((value) => value < 0);
   const zeroCashY = scaleCashY(0);
 
-  const xTickIndexes = [0, Math.round((count - 1) / 3), Math.round(((count - 1) * 2) / 3), count - 1];
+  // 3 points (start/mid/end, e.g. Y0/Y9/Y18) rather than desktop's 4 - half as many x-axis labels
+  // to cram into a narrower box. Deduped since a short horizon (few data points) can otherwise
+  // round two of these to the same index.
+  const xTickIndexesRaw = isMobile
+    ? [0, Math.round((count - 1) / 2), count - 1]
+    : [0, Math.round((count - 1) / 3), Math.round(((count - 1) * 2) / 3), count - 1];
+  const xTickIndexes = [...new Set(xTickIndexesRaw)];
   const primaryTicks = axisTicks(primaryMin, primaryMax, AXIS_TICK_COUNT);
   const unallocatedTicks = axisTicks(unallocatedMin, unallocatedMax, AXIS_TICK_COUNT);
   const cashTicks = axisTicks(cashMin, cashMax, AXIS_TICK_COUNT);
