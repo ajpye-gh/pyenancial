@@ -821,12 +821,17 @@ input[type='range']::-moz-range-thumb {
   @media (max-width: 640px) {
     gap: 8px;
     margin-top: 0.5rem;
-    /* .page__header-controls' real rendered height on mobile (measured, not guessed) - shared so
-     *  this and .app-shell__chart's sticky `bottom` below can't drift out of sync with each other
-     *  the way they previously did (independently-guessed magic numbers, 48 here vs 63 there,
-     *  neither matching the bar's actual height once its own padding later changed - that mismatch
-     *  is what left a gap under the sticky chart with scrolled content visible through it). */
-    --mobile-toolbar-height: 59px;
+    /* .page__header-controls' real rendered height on mobile is ~59px (measured, not guessed) -
+     *  shared so this and .app-shell__chart's sticky `bottom` below can't drift out of sync with
+     *  each other the way they previously did (independently-guessed magic numbers, 48 here vs 63
+     *  there, neither matching the bar's actual height once its own padding later changed - that
+     *  mismatch is what left a gap under the sticky chart with scrolled content visible through
+     *  it). Deliberately a few px under that measurement, not equal to it: sitting exactly at the
+     *  boundary is fragile against the sub-px rendering differences a real browser/OS/zoom level
+     *  introduces, which is why a first attempt at 59px (not 60) was still visibly off by 1-2px.
+     *  A few px of the chart overlapping behind the (opaque, higher z-index) toolbar is invisible;
+     *  a few px of gap is not - so round down with room to spare, not to the nearest px. */
+    --mobile-toolbar-height: 55px;
     padding-bottom: calc(var(--mobile-toolbar-height) + env(safe-area-inset-bottom));
   }
 }
