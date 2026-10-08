@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { PlanToolbar } from '@src/components/PlanToolbar';
@@ -69,10 +69,10 @@ describe('PlanToolbar layout', () => {
     expect(screen.queryByRole('button', { name: 'Plan menu' })).not.toBeInTheDocument();
   });
 
-  it('shows "Untitled plan" with no active plan, and no dirty dot', () => {
+  it('shows "Draft" with no active plan, and no dirty dot', () => {
     renderToolbar({ activePlanName: null, isDirty: false });
 
-    expect(screen.getByText('Untitled plan')).toBeInTheDocument();
+    expect(screen.getByText('Draft')).toBeInTheDocument();
     expect(screen.queryByTitle('Unsaved changes')).not.toBeInTheDocument();
   });
 
@@ -152,18 +152,7 @@ describe('PlanToolbar save', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('defaults the save prompt to the active plan name', async () => {
-    const user = userEvent.setup();
-
-    renderToolbar({ activePlanName: 'Retirement' });
-    await user.click(screen.getByRole('button', { name: 'Save Plan' }));
-    const { dialog, input } = await findPromptDialog();
-
-    expect(within(dialog).getByText('Save Plan As:')).toBeInTheDocument();
-    expect(input.value).toBe('Retirement');
-  });
-
-  it('re-saves the active plan under its own name without an overwrite prompt', async () => {
+  it('re-saves an already-named plan silently under its own name, with no prompt at all', async () => {
     const user = userEvent.setup();
     savePlan('Base case', freshPlan());
     const updated: Plan = { ...freshPlan(), answers: { housing: 'rent' } };
@@ -171,12 +160,23 @@ describe('PlanToolbar save', () => {
 
     renderToolbar({ activePlanName: 'Base case', planForSaving: () => updated, onPlanSaved });
     await user.click(screen.getByRole('button', { name: 'Save Plan' }));
-    const { confirmWith } = await findPromptDialog();
-    await confirmWith(user, 'Base case', 'Save');
 
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(onPlanSaved).toHaveBeenCalledWith('Base case', updated));
     expect(loadSavedPlan('Base case')).toEqual(updated);
-    expect(onPlanSaved).toHaveBeenCalledWith('Base case', updated);
+  });
+
+  it('shows the saving spinner for at least the minimum duration, then settles back to the save icon', async () => {
+    const user = userEvent.setup();
+
+    renderToolbar({ activePlanName: 'Base case' });
+    await user.click(screen.getByRole('button', { name: 'Save Plan' }));
+
+    expect(screen.getByRole('button', { name: 'Save Plan' })).toHaveAttribute('title', 'Saving…');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Save Plan' })).toHaveAttribute('title', 'Save Plan');
+    });
   });
 
   it('asks to confirm before overwriting a plan that already exists, and overwrites when confirmed', async () => {

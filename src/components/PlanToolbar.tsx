@@ -21,6 +21,11 @@ import {
  *  leave/re-enter pair, closing it out from under a click that was already in flight. */
 const CLOSE_DELAY_MS = 150;
 
+/** Save itself (an in-memory object write) finishes well under a frame - without an artificial
+ *  floor, the pinwheel would flash on and immediately off, unnoticeable. This makes "Save just
+ *  happened" visible even though there's nothing slow to actually wait on. */
+const MIN_SAVE_SPINNER_MS = 300;
+
 interface PlanToolbarProps {
   /** Name of the saved plan the current draft was loaded from/saved as, or null if untitled. */
   activePlanName: string | null;
@@ -61,6 +66,7 @@ export function PlanToolbar({
 }: Readonly<PlanToolbarProps>) {
   const [savedPlans, setSavedPlans] = useState<string[]>(() => listSavedPlans());
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -134,11 +140,11 @@ export function PlanToolbar({
     return null;
   };
 
-  const handleSave = async () => {
-    const name = await resolveSaveName('Save Plan As:', activePlanName ?? 'My plan', { exemptName: activePlanName });
-    if (!name) {
-      return;
-    }
+  /** Writes `name` under the current draft, showing the pinwheel for at least
+   *  `MIN_SAVE_SPINNER_MS` even though the write itself is near-instant (see its comment). */
+  const writeSave = async (name: string) => {
+    setIsSaving(true);
+    const startedAt = Date.now();
     try {
       const plan = planForSaving();
       savePlan(name, plan);
@@ -147,7 +153,29 @@ export function PlanToolbar({
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save plan.');
+    } finally {
+      const remaining = MIN_SAVE_SPINNER_MS - (Date.now() - startedAt);
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
+      setIsSaving(false);
     }
+  };
+
+  /** Prompts for a name only the first time a draft is saved - once it's tied to a saved plan,
+   *  Save is a silent overwrite of that same name, same as any other app's Ctrl+S. "Save As" (a
+   *  deliberate rename/fork to a different name) isn't exposed here; renaming would need its own
+   *  affordance. */
+  const handleSave = async () => {
+    if (activePlanName !== null) {
+      await writeSave(activePlanName);
+      return;
+    }
+    const name = await resolveSaveName('Save Plan As:', 'My plan');
+    if (!name) {
+      return;
+    }
+    await writeSave(name);
   };
 
   /** If the draft isn't tied to any saved plan, offer to stash it under a new name before it gets
@@ -353,6 +381,13 @@ export function PlanToolbar({
     }
   };
 
+  let saveButtonTitle = 'Save Plan';
+  if (isSaving) {
+    saveButtonTitle = 'Saving…';
+  } else if (isAutosaving) {
+    saveButtonTitle = 'Autosaving…';
+  }
+
   return (
     <div className="plan-toolbar-wrap">
       <div className="plan-toolbar">
@@ -445,21 +480,25 @@ export function PlanToolbar({
             </div>
           )}
         </div>
-      </div>
 
-      <div className="plan-toolbar plan-toolbar--active">
+        <div className="plan-toolbar__divider" />
+
         <span className="plan-toolbar__active">
-          <span className="plan-toolbar__active-name">{activePlanName ?? 'Untitled plan'}</span>
+          {activePlanName === null ? (
+            <span key="draft" className="plan-toolbar__active-draft">Draft</span>
+          ) : (
+            <span key={activePlanName} className="plan-toolbar__active-name">{activePlanName}</span>
+          )}
           {isDirty && <span className="plan-toolbar__active-dot" title="Unsaved changes" aria-label="Unsaved changes" />}
         </span>
         <button
           type="button"
           className="plan-toolbar__btn"
-          title={isAutosaving ? 'Autosaving…' : 'Save Plan'}
+          title={saveButtonTitle}
           aria-label="Save Plan"
           onClick={handleSave}
         >
-          {isAutosaving ? <PinwheelIcon size={16} /> : <SaveIcon size={16} />}
+          {isSaving || isAutosaving ? <PinwheelIcon size={16} /> : <SaveIcon size={16} />}
         </button>
         <button type="button" className="plan-toolbar__btn" title="Share Plan" aria-label="Share Plan" onClick={handleShare}>
           <ShareIcon size={16} />

@@ -12,15 +12,16 @@ beforeAll(() => {
 });
 
 describe('SettingsMenu', () => {
-  it('calls onReviewAnswers and closes the panel when "Review my answers" is clicked', async () => {
+  it('toggles dark mode when clicked', async () => {
     const user = userEvent.setup();
-    const onReviewAnswers = jest.fn();
-    render(<SettingsMenu onReviewAnswers={onReviewAnswers} />);
+    render(<SettingsMenu />);
 
     await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('menuitem', { name: /review my answers/i }));
+    const darkModeToggle = screen.getByRole('menuitemcheckbox', { name: /dark mode/i });
+    expect(darkModeToggle).toHaveAttribute('aria-checked', 'false');
 
-    expect(onReviewAnswers).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('menuitem', { name: /review my answers/i })).not.toBeInTheDocument();
+    await user.click(darkModeToggle);
+
+    expect(darkModeToggle).toHaveAttribute('aria-checked', 'true');
   });
 });
