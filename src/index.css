@@ -580,6 +580,12 @@ button.plan-toolbar__item--active:hover {
   display: none;
 }
 
+.plan-toolbar__panel-divider {
+  height: 1px;
+  margin: 4px 0.625rem;
+  background: var(--border);
+}
+
 .plan-toolbar__panel-error {
   display: block;
   font-size: 13px;

@@ -289,6 +289,29 @@ export function PlanToolbar({
     });
   };
 
+  const handleShareSaved = async (name: string, event: MouseEvent) => {
+    event.stopPropagation();
+    const plan = loadSavedPlan(name);
+    if (!plan) {
+      setError(`Could not share "${name}".`);
+      return;
+    }
+    const proceed = await confirm(
+      'This link encodes all of your financial details, not just the site URL - only share it with people you trust.',
+      { confirmLabel: 'Copy', cancelLabel: 'Cancel' },
+    );
+    if (!proceed) {
+      return;
+    }
+    try {
+      const url = buildShareUrl(plan);
+      await navigator.clipboard.writeText(url);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not copy share link.');
+    }
+  };
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -386,6 +409,14 @@ export function PlanToolbar({
                   <button
                     type="button"
                     className="plan-toolbar__row-btn"
+                    aria-label={`Share "${name}"`}
+                    onClick={(event) => void handleShareSaved(name, event)}
+                  >
+                    <ShareIcon size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="plan-toolbar__row-btn"
                     aria-label={`Delete "${name}"`}
                     onClick={(event) => handleDelete(name, event)}
                   >
@@ -394,6 +425,13 @@ export function PlanToolbar({
                 </div>
               ))
             )}
+            <div className="plan-toolbar__panel-divider" />
+            <button type="button" role="menuitem" className="plan-toolbar__item" onClick={handleImportClick}>
+              <span className="settings-menu__row-label">
+                <UploadIcon size={14} />
+                Import .pyf
+              </span>
+            </button>
             {error && (
               <span className="plan-toolbar__panel-error" role="alert">
                 {error}
@@ -411,9 +449,6 @@ export function PlanToolbar({
         onClick={handleSave}
       >
         {isAutosaving ? <PinwheelIcon size={16} /> : <SaveIcon size={16} />}
-      </button>
-      <button type="button" className="plan-toolbar__btn" title="Import .pyf" aria-label="Import .pyf" onClick={handleImportClick}>
-        <UploadIcon size={16} />
       </button>
       <button type="button" className="plan-toolbar__btn" title="Share Plan" aria-label="Share Plan" onClick={handleShare}>
         <ShareIcon size={16} />

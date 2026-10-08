@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { PlanToolbar } from '@src/components/PlanToolbar';
 import { freshPlan, listSavedPlans, loadSavedPlan, savePlan, type Plan } from '@src/lib/plans';
-import { buildShareUrl } from '@src/lib/planShare';
+import { buildShareUrl, readSharedPlanFromLocation } from '@src/lib/planShare';
 
 beforeEach(() => {
   localStorage.clear();
@@ -64,7 +64,7 @@ describe('PlanToolbar layout', () => {
     expect(screen.getByRole('button', { name: 'Redo' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Saved Plans' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save Plan' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Import .pyf' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Share Plan' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Plan menu' })).not.toBeInTheDocument();
   });
 
@@ -235,7 +235,8 @@ describe('PlanToolbar Saved Plans (load)', () => {
     await user.click(screen.getByRole('button', { name: 'Saved Plans' }));
 
     expect(screen.getByText('(nothing saved)')).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('menuitem')).toHaveLength(1);
+    expect(screen.getByRole('menuitem', { name: 'Import .pyf' })).toBeInTheDocument();
   });
 
   it('does not show "(nothing saved)" once a plan exists', async () => {
@@ -414,6 +415,18 @@ describe('PlanToolbar delete', () => {
 });
 
 describe('PlanToolbar import', () => {
+  it('triggers the file picker from the "Import .pyf" item at the bottom of the Saved Plans panel', async () => {
+    const user = userEvent.setup();
+    renderToolbar();
+    await user.click(screen.getByRole('button', { name: 'Saved Plans' }));
+    const click = jest.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+
+    await user.click(screen.getByRole('menuitem', { name: 'Import .pyf' }));
+
+    expect(click).toHaveBeenCalledTimes(1);
+    click.mockRestore();
+  });
+
   it('suggests the file name (minus extension) as the save name, and saves+loads it under whatever name is confirmed', async () => {
     const user = userEvent.setup();
     const plan = freshPlan();
@@ -490,16 +503,16 @@ describe('PlanToolbar import', () => {
   });
 });
 
-describe('PlanToolbar share', () => {
-  /** `userEvent.setup()` installs its own navigator.clipboard stub (jsdom has no real Clipboard
-   *  API), replacing anything set beforehand - so the stub has to exist first, and we spy on
-   *  *its* writeText rather than defining our own navigator.clipboard. */
-  function setupClipboard() {
-    const user = userEvent.setup();
-    const writeText = jest.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
-    return { user, writeText };
-  }
+/** `userEvent.setup()` installs its own navigator.clipboard stub (jsdom has no real Clipboard
+ *  API), replacing anything set beforehand - so the stub has to exist first, and we spy on
+ *  *its* writeText rather than defining our own navigator.clipboard. */
+function setupClipboard() {
+  const user = userEvent.setup();
+  const writeText = jest.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+  return { user, writeText };
+}
 
+describe('PlanToolbar share', () => {
   it('warns about financial details before copying, and copies only once confirmed', async () => {
     const { user, writeText } = setupClipboard();
     const plan = freshPlan();
@@ -543,6 +556,41 @@ describe('PlanToolbar share', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('denied');
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('PlanToolbar per-plan share', () => {
+  it('shares the saved plan\'s own content, not the current draft, once confirmed', async () => {
+    const { user, writeText } = setupClipboard();
+    const saved: Plan = { ...freshPlan(), answers: { housing: 'rent' } };
+    savePlan('Base case', saved);
+
+    renderToolbar({ planForSaving: () => freshPlan() });
+    await user.click(screen.getByRole('button', { name: 'Saved Plans' }));
+    await user.click(screen.getByRole('button', { name: 'Share "Base case"' }));
+
+    const warning = await screen.findByRole('alertdialog');
+    expect(within(warning).getByText(/financial details/)).toBeInTheDocument();
+    await user.click(within(warning).getByRole('button', { name: 'Copy' }));
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?plan='));
+    const [url] = writeText.mock.calls[0];
+    window.history.replaceState(null, '', url);
+    expect(readSharedPlanFromLocation()).toEqual({ present: true, plan: saved });
+  });
+
+  it('copies nothing if the warning is cancelled', async () => {
+    const { user, writeText } = setupClipboard();
+    savePlan('Base case', freshPlan());
+
+    renderToolbar();
+    await user.click(screen.getByRole('button', { name: 'Saved Plans' }));
+    await user.click(screen.getByRole('button', { name: 'Share "Base case"' }));
+
+    const warning = await screen.findByRole('alertdialog');
+    await user.click(within(warning).getByRole('button', { name: 'Cancel' }));
+
+    expect(writeText).not.toHaveBeenCalled();
   });
 });
 
