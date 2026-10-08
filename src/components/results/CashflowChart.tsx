@@ -1,4 +1,5 @@
 import { useState, type MouseEvent } from 'react';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { formatCurrency, formatCurrencyCompact } from '../../lib/format';
 import type { ChartSeries } from '../../lib/model';
 import type { PrimarySeries } from '../../lib/chartSeries';
@@ -10,13 +11,33 @@ interface CashflowChartProps {
 
 type SeriesKey = 'unallocated' | 'primary' | 'cash' | 'target';
 
-const WIDTH = 720;
-const HEIGHT = 240;
-const PADDING = { top: 20, right: 58, bottom: 28, left: 58 };
+/** Desktop's viewBox is wide and short (3:1) because horizontal space is cheap there. On mobile,
+ *  it's the opposite - the chart is docked full-width at the bottom of a narrow screen, so
+ *  horizontal space is the scarce resource while vertical space is comparatively free. Rather than
+ *  just scaling the same 720x240 box down (which shrinks text/padding/stroke-width together,
+ *  proportionally - the actual cause of "laughably small" on mobile), mobile gets its own, narrower
+ *  and taller viewBox. Since font-size/padding/stroke-width are all defined in viewBox units, a
+ *  smaller WIDTH alone makes every one of those occupy a bigger fraction of the chart once CSS
+ *  scales the whole thing back up to the container's real width - independent of the font-size bump
+ *  below, which stacks on top of it for mobile specifically. */
+const DESKTOP_WIDTH = 720;
+const DESKTOP_HEIGHT = 240;
+const DESKTOP_PADDING = { top: 20, right: 58, bottom: 28, left: 58 };
+const MOBILE_WIDTH = 360;
+const MOBILE_HEIGHT = 260;
+// Right needs more room than left despite the narrower box: the cash axis uses formatCurrency
+// (full numbers, e.g. "$2,411") rather than the left axes' compact formatCurrencyCompact
+// ("$856k") - deliberately, since cash figures are small enough that compacting to the nearest
+// $1k would hide real differences. At the bumped mobile font-size, "$2,411" measures ~54 viewBox
+// units wide - this padding is sized to that, not shrunk to an amount that would clip it.
+const MOBILE_PADDING = { top: 18, right: 62, bottom: 24, left: 58 };
 const AXIS_TICK_COUNT = 4;
-const AXIS_LABEL_STACK_OFFSET = 7;
-const TOOLTIP_WIDTH = 148;
-const TOOLTIP_ROW_HEIGHT = 18;
+const DESKTOP_AXIS_LABEL_STACK_OFFSET = 7;
+const MOBILE_AXIS_LABEL_STACK_OFFSET = 10;
+const DESKTOP_TOOLTIP_WIDTH = 148;
+const MOBILE_TOOLTIP_WIDTH = 172;
+const DESKTOP_TOOLTIP_ROW_HEIGHT = 18;
+const MOBILE_TOOLTIP_ROW_HEIGHT = 22;
 const TOOLTIP_TOP_PADDING = 18;
 const TOOLTIP_BOTTOM_PADDING = 10;
 
@@ -36,6 +57,14 @@ function legendItemClassName(visible: boolean): string {
 }
 
 export function CashflowChart({ chart, primary }: Readonly<CashflowChartProps>) {
+  const isMobile = useIsMobile();
+  const WIDTH = isMobile ? MOBILE_WIDTH : DESKTOP_WIDTH;
+  const HEIGHT = isMobile ? MOBILE_HEIGHT : DESKTOP_HEIGHT;
+  const PADDING = isMobile ? MOBILE_PADDING : DESKTOP_PADDING;
+  const AXIS_LABEL_STACK_OFFSET = isMobile ? MOBILE_AXIS_LABEL_STACK_OFFSET : DESKTOP_AXIS_LABEL_STACK_OFFSET;
+  const TOOLTIP_WIDTH = isMobile ? MOBILE_TOOLTIP_WIDTH : DESKTOP_TOOLTIP_WIDTH;
+  const TOOLTIP_ROW_HEIGHT = isMobile ? MOBILE_TOOLTIP_ROW_HEIGHT : DESKTOP_TOOLTIP_ROW_HEIGHT;
+
   const { yearLabels, freeCash, unallocatedSavings } = chart;
   const primaryValues = primary.values;
   const hasPrimary = primaryValues.length > 0;
@@ -137,7 +166,8 @@ export function CashflowChart({ chart, primary }: Readonly<CashflowChartProps>) 
     <div className="cashflow-chart">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="cashflow-chart__svg"
+        style={{ aspectRatio: `${WIDTH} / ${HEIGHT}` }}
+        className={isMobile ? 'cashflow-chart__svg cashflow-chart__svg--mobile' : 'cashflow-chart__svg'}
         role="img"
         aria-label={`${chartedSeriesLabel} across ${count} years`}
         onMouseMove={handleMouseMove}

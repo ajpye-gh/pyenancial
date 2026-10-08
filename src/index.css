@@ -1635,20 +1635,38 @@ input.slider-field__value-input {
   margin-bottom: 1.5rem;
 
   @media (max-width: 640px) {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.625rem;
     margin-bottom: 0.5rem;
   }
 }
 
 .cashflow-chart__svg {
   width: 100%;
-  /* Must match the component's WIDTH/HEIGHT viewBox ratio exactly so the
-     rendered box's aspect ratio never diverges from it - otherwise the
-     browser's default preserveAspectRatio letterboxes/centers the content,
-     which breaks the hover coordinate math in CashflowChart.tsx. */
+  /* Fallback for the no-JS/pre-hydration instant - CashflowChart.tsx sets this via inline style
+     once mounted, matching whichever of its desktop/mobile WIDTH/HEIGHT constants is live, so the
+     rendered box's aspect ratio never diverges from the current viewBox. A mismatch would make the
+     browser's default preserveAspectRatio letterbox/center the content, breaking the hover
+     coordinate math in CashflowChart.tsx. */
   aspect-ratio: 720 / 240;
   display: block;
   cursor: crosshair;
+}
+
+/* Mobile uses its own narrower/taller viewBox (see CashflowChart.tsx) specifically so values
+ *  defined in viewBox units - including this font-size bump - end up bigger in real rendered
+ *  pixels once scaled back up to the container's actual width, not just scaled down uniformly like
+ *  the desktop chart shrunk into a phone-width container would be. */
+.cashflow-chart__svg--mobile .cashflow-chart__tick,
+.cashflow-chart__svg--mobile .cashflow-chart__axis-label {
+  font-size: 15px;
+}
+
+.cashflow-chart__svg--mobile .cashflow-chart__tooltip-title {
+  font-size: 15px;
+}
+
+.cashflow-chart__svg--mobile .cashflow-chart__tooltip-row {
+  font-size: 14px;
 }
 
 .cashflow-chart__gridline {
