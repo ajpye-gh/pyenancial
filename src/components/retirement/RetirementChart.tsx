@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 import { Tooltip } from '../Tooltip';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { formatCurrency, formatCurrencyCompact } from '../../lib/format';
 import type { RetirementProjection } from '../../lib/retirement';
 
@@ -17,13 +18,25 @@ interface RetirementChartProps {
   currentAge: number;
 }
 
-const WIDTH = 720;
-const HEIGHT = 240;
-const PADDING = { top: 20, right: 58, bottom: 28, left: 58 };
-const AXIS_TICK_COUNT = 4;
-const AXIS_LABEL_STACK_OFFSET = 7;
-const TOOLTIP_WIDTH = 150;
-const TOOLTIP_ROW_HEIGHT = 18;
+const DESKTOP_WIDTH = 720;
+const DESKTOP_HEIGHT = 240;
+const DESKTOP_PADDING = { top: 20, right: 58, bottom: 28, left: 58 };
+const MOBILE_WIDTH = 360;
+const MOBILE_HEIGHT = 260;
+// Both sides use formatCurrencyCompact (balances on the left, tax on the right), so both need the
+// same room for its M-range output ("$2.94M") - see CashflowChart's mobile padding for the same
+// reasoning applied to a mixed compact/full-currency axis pair.
+const MOBILE_PADDING = { top: 18, right: 66, bottom: 24, left: 66 };
+const DESKTOP_AXIS_TICK_COUNT = 4;
+// Fewer y-axis values on mobile declutters the now-bigger-font labels - same reasoning as
+// CashflowChart's mobile tick count.
+const MOBILE_AXIS_TICK_COUNT = 3;
+const DESKTOP_AXIS_LABEL_STACK_OFFSET = 7;
+const MOBILE_AXIS_LABEL_STACK_OFFSET = 10;
+const DESKTOP_TOOLTIP_WIDTH = 150;
+const MOBILE_TOOLTIP_WIDTH = 174;
+const DESKTOP_TOOLTIP_ROW_HEIGHT = 18;
+const MOBILE_TOOLTIP_ROW_HEIGHT = 22;
 const TOOLTIP_TOP_PADDING = 18;
 const TOOLTIP_BOTTOM_PADDING = 10;
 
@@ -51,6 +64,15 @@ export function RetirementChart({
   taxSeries,
   currentAge,
 }: Readonly<RetirementChartProps>) {
+  const isMobile = useIsMobile();
+  const WIDTH = isMobile ? MOBILE_WIDTH : DESKTOP_WIDTH;
+  const HEIGHT = isMobile ? MOBILE_HEIGHT : DESKTOP_HEIGHT;
+  const PADDING = isMobile ? MOBILE_PADDING : DESKTOP_PADDING;
+  const AXIS_LABEL_STACK_OFFSET = isMobile ? MOBILE_AXIS_LABEL_STACK_OFFSET : DESKTOP_AXIS_LABEL_STACK_OFFSET;
+  const AXIS_TICK_COUNT = isMobile ? MOBILE_AXIS_TICK_COUNT : DESKTOP_AXIS_TICK_COUNT;
+  const TOOLTIP_WIDTH = isMobile ? MOBILE_TOOLTIP_WIDTH : DESKTOP_TOOLTIP_WIDTH;
+  const TOOLTIP_ROW_HEIGHT = isMobile ? MOBILE_TOOLTIP_ROW_HEIGHT : DESKTOP_TOOLTIP_ROW_HEIGHT;
+
   const { yearLabels, retirementYearIndex } = rothProjection;
   const rothBalances = rothProjection.balances;
   const traditionalBalances = traditionalProjection.balances;
@@ -79,7 +101,13 @@ export function RetirementChart({
   const taxLine = buildPath(taxSeries, scaleX, scaleTaxY);
   const balanceTicks = axisTicks(balanceMin, balanceMax, AXIS_TICK_COUNT);
   const taxTicks = axisTicks(taxMin, taxMax, AXIS_TICK_COUNT);
-  const xTickIndexes = [0, Math.round((count - 1) / 3), Math.round(((count - 1) * 2) / 3), count - 1];
+  // 3 points (start/mid/end) rather than desktop's 4 on mobile - half as many x-axis labels to
+  // cram into a narrower box. Deduped since a short horizon can otherwise round two of these to
+  // the same index.
+  const xTickIndexesRaw = isMobile
+    ? [0, Math.round((count - 1) / 2), count - 1]
+    : [0, Math.round((count - 1) / 3), Math.round(((count - 1) * 2) / 3), count - 1];
+  const xTickIndexes = [...new Set(xTickIndexesRaw)];
 
   const indexFromClientX = (svg: SVGSVGElement, clientX: number): number => {
     const rect = svg.getBoundingClientRect();
@@ -116,7 +144,8 @@ export function RetirementChart({
     <div className="cashflow-chart">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="cashflow-chart__svg"
+        style={{ aspectRatio: `${WIDTH} / ${HEIGHT}` }}
+        className={isMobile ? 'cashflow-chart__svg cashflow-chart__svg--mobile' : 'cashflow-chart__svg'}
         role="img"
         aria-label={`Projected Roth, Traditional, and after-tax retirement balances and estimated income tax from age ${currentAge} through age ${currentAge + count - 1}, including drawdown after retirement`}
         onMouseMove={handleMouseMove}

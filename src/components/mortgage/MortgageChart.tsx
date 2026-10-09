@@ -1,4 +1,5 @@
 import { useState, type MouseEvent } from 'react';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { formatCurrencyCompact } from '../../lib/format';
 
 interface MortgageChartProps {
@@ -14,13 +15,25 @@ interface MortgageChartProps {
   withExtraPayoffYear: number;
 }
 
-const WIDTH = 720;
-const HEIGHT = 240;
-const PADDING = { top: 20, right: 20, bottom: 28, left: 58 };
-const AXIS_TICK_COUNT = 4;
-const AXIS_LABEL_STACK_OFFSET = 7;
-const TOOLTIP_WIDTH = 150;
-const TOOLTIP_ROW_HEIGHT = 18;
+const DESKTOP_WIDTH = 720;
+const DESKTOP_HEIGHT = 240;
+const DESKTOP_PADDING = { top: 20, right: 20, bottom: 28, left: 58 };
+const MOBILE_WIDTH = 360;
+const MOBILE_HEIGHT = 260;
+// Left is sized to formatCurrencyCompact's M-range output ("$2.94M") at the bumped mobile
+// font-size - see CashflowChart's mobile padding for the same reasoning. No right-side axis here,
+// so right stays unchanged.
+const MOBILE_PADDING = { top: 18, right: 20, bottom: 24, left: 66 };
+const DESKTOP_AXIS_TICK_COUNT = 4;
+// Fewer y-axis values on mobile declutters the now-bigger-font labels - same reasoning as
+// CashflowChart's mobile tick count.
+const MOBILE_AXIS_TICK_COUNT = 3;
+const DESKTOP_AXIS_LABEL_STACK_OFFSET = 7;
+const MOBILE_AXIS_LABEL_STACK_OFFSET = 10;
+const DESKTOP_TOOLTIP_WIDTH = 150;
+const MOBILE_TOOLTIP_WIDTH = 174;
+const DESKTOP_TOOLTIP_ROW_HEIGHT = 18;
+const MOBILE_TOOLTIP_ROW_HEIGHT = 22;
 const TOOLTIP_TOP_PADDING = 18;
 const TOOLTIP_BOTTOM_PADDING = 10;
 
@@ -46,6 +59,15 @@ export function MortgageChart({
   originalPayoffYear,
   withExtraPayoffYear,
 }: Readonly<MortgageChartProps>) {
+  const isMobile = useIsMobile();
+  const WIDTH = isMobile ? MOBILE_WIDTH : DESKTOP_WIDTH;
+  const HEIGHT = isMobile ? MOBILE_HEIGHT : DESKTOP_HEIGHT;
+  const PADDING = isMobile ? MOBILE_PADDING : DESKTOP_PADDING;
+  const AXIS_LABEL_STACK_OFFSET = isMobile ? MOBILE_AXIS_LABEL_STACK_OFFSET : DESKTOP_AXIS_LABEL_STACK_OFFSET;
+  const AXIS_TICK_COUNT = isMobile ? MOBILE_AXIS_TICK_COUNT : DESKTOP_AXIS_TICK_COUNT;
+  const TOOLTIP_WIDTH = isMobile ? MOBILE_TOOLTIP_WIDTH : DESKTOP_TOOLTIP_WIDTH;
+  const TOOLTIP_ROW_HEIGHT = isMobile ? MOBILE_TOOLTIP_ROW_HEIGHT : DESKTOP_TOOLTIP_ROW_HEIGHT;
+
   const count = originalBalances.length;
   const yearLabels = originalBalances.map((_, index) => `Y${index}`);
   const innerWidth = WIDTH - PADDING.left - PADDING.right;
@@ -59,9 +81,14 @@ export function MortgageChart({
   const originalLine = buildPath(originalBalances, scaleX, scaleBalanceY);
   const withExtraLine = buildPath(withExtraBalances, scaleX, scaleBalanceY);
   const balanceTicks = axisTicks(0, balanceMax, AXIS_TICK_COUNT);
-  // Deduplicated - a very short schedule (e.g. an already-tiny or already-paid-off balance) can
-  // otherwise produce repeated indexes here, which would render duplicate-keyed ticks.
-  const xTickIndexes = [...new Set([0, Math.round((count - 1) / 3), Math.round(((count - 1) * 2) / 3), count - 1])];
+  // 3 points (start/mid/end) rather than desktop's 4 on mobile - half as many x-axis labels to
+  // cram into a narrower box. Deduplicated - a very short schedule (e.g. an already-tiny or
+  // already-paid-off balance) can otherwise produce repeated indexes here, which would render
+  // duplicate-keyed ticks.
+  const xTickIndexesRaw = isMobile
+    ? [0, Math.round((count - 1) / 2), count - 1]
+    : [0, Math.round((count - 1) / 3), Math.round(((count - 1) * 2) / 3), count - 1];
+  const xTickIndexes = [...new Set(xTickIndexesRaw)];
 
   const indexFromClientX = (svg: SVGSVGElement, clientX: number): number => {
     const rect = svg.getBoundingClientRect();
@@ -98,7 +125,8 @@ export function MortgageChart({
     <div className="cashflow-chart">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="cashflow-chart__svg"
+        style={{ aspectRatio: `${WIDTH} / ${HEIGHT}` }}
+        className={isMobile ? 'cashflow-chart__svg cashflow-chart__svg--mobile' : 'cashflow-chart__svg'}
         role="img"
         aria-label={`Remaining mortgage balance over ${count - 1} years, original schedule${hasExtraPayment ? ' vs. with extra principal payments' : ''}`}
         onMouseMove={handleMouseMove}
